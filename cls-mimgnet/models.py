@@ -4,15 +4,6 @@ import torch.nn.functional as F
 
 from collections import OrderedDict
 
-class Flatten(nn.Module):
-    '''
-    Flatten for nn.sequential
-    https://stackoverflow.com/questions/53953460/how-to-flatten-input-in-nn-sequential-in-pytorch
-    '''
-    def forward(self, x):
-        batch_size = x.shape[0]
-        return x.view(batch_size, -1)
-
 class Network(nn.Module):
     def __init__(self, n_channel=32, n_way=5):
         super().__init__()

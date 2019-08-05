@@ -18,7 +18,7 @@ def inner_loop(args, meta_learner, support_x, support_y, query_x, query_y, logge
     run a single episode == n-way k-shot problem
     '''
     meta_learner.zero_grad()
-    tuned_params = {}
+    tuned_params = OrderedDict({})
     for k, v in meta_learner.named_parameters():
         tuned_params[k] = v
 
@@ -30,14 +30,16 @@ def inner_loop(args, meta_learner, support_x, support_y, query_x, query_y, logge
     meta_learner,
     mode=mode)
 
-    for j in range(args.grad_steps_num_train):
+    inner_iter = args.grad_steps_num_train if mode=='train' else args.grad_steps_num_eval
+    for j in range(inner_iter):
 
         # get inner-grad
         in_pred = meta_learner(support_x, tuned_params)
         in_loss = F.cross_entropy(in_pred, support_y)
         in_grad = torch.autograd.grad(
             in_loss,
-            tuned_params.values()
+            tuned_params.values(),
+            create_graph=not(args.first_order)
         )
 
         # update base-learner
@@ -207,7 +209,8 @@ def run(args):
     dataloader_valid = DataLoader(dataset_valid,
                                      batch_size=1,
                                      shuffle=True,
-                                     num_workers=args.num_workers,pin_memory=True)
+                                     num_workers=args.num_workers,
+                                     pin_memory=True)
 
     dataloaders = (dataloader_train, dataloader_valid)
 
