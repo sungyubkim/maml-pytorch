@@ -97,12 +97,12 @@ def outer_loop(args, meta_learner, opt, batch, logger, iter_counter):
 
     meta_learner.zero_grad()
     for p, g in zip(meta_learner.parameters(), grad):
-        p.grad = g
+        p.grad = g/float(args.batch_size)
 
     # summarise inner loop and get validation performance
     logger.summarise_inner_loop(mode='train')
 
-    torch.nn.utils.clip_grad_norm_(meta_learner.parameters(), 1.0)
+    torch.nn.utils.clip_grad_value_(meta_learner.parameters(), 10.0)
 
     opt.step()
 
@@ -183,7 +183,7 @@ def run(args):
                             n_way=args.n_way).to(args.device)
 
     # make optimizer
-    opt = torch.optim.Adam(meta_learner.parameters(), args.lr_out, betas=(0.9, 0.99))
+    opt = torch.optim.Adam(meta_learner.parameters(), args.lr_out)
 
     # make datasets/ dataloaders
     dataset_train = MiniImagenet(mode='train',

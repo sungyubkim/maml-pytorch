@@ -59,9 +59,13 @@ class Network(nn.Module):
             bias=params['layers.conv_{}_bias'.format(i)],
             padding=1)
             x = F.relu(x)
+            x_reshape = x.permute(1, 0, 2, 3).contiguous().detach() # (C, N, H, W)
+            x_reshape = x_reshape.view(self.n_channel, -1) # (C, N * H * W)
+            running_mean = x_reshape.mean(1) # (C)
+            running_var = x_reshape.var(1) # (C)
             x = F.batch_norm(x,
-            running_mean=x.mean(dim=0).mean(dim=-1).mean(dim=-1).detach(),
-            running_var=x.var(dim=0).mean(dim=-1).mean(dim=-1).detach(),
+            running_mean=running_mean,
+            running_var=running_var,
             weight=params['layers.bn_{}_weight'.format(i)],
             bias=params['layers.bn_{}_bias'.format(i)],
             momentum=1.0,
