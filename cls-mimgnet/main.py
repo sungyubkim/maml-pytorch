@@ -174,6 +174,9 @@ def valid(args, meta_learner, dataloader_valid, logger, iter_counter):
 
     return None
 
+def test(args, meta_learner, dataloader_test, logger, iter_counter):
+    
+
 def run(args):
 
     utils.set_seed(args.seed)
@@ -183,7 +186,7 @@ def run(args):
                             n_way=args.n_way).to(args.device)
 
     # make optimizer
-    opt = torch.optim.Adam(meta_learner.parameters(), args.lr_out)
+    opt = torch.optim.Adam(meta_learner.parameters(), args.lr_out, eps=1e-4)
 
     # make datasets/ dataloaders
     dataset_train = MiniImagenet(mode='train',
