@@ -17,7 +17,6 @@ def inner_loop(args, meta_learner, support_x, support_y, query_x, query_y, logge
     '''
     run a single episode == n-way k-shot problem
     '''
-    meta_learner.zero_grad()
     tuned_params = OrderedDict({})
     for k, v in meta_learner.named_parameters():
         tuned_params[k] = v
@@ -45,6 +44,8 @@ def inner_loop(args, meta_learner, support_x, support_y, query_x, query_y, logge
         # update base-learner
         for k, g in zip(tuned_params.keys(), in_grad):
             tuned_params[k] = tuned_params[k] - args.lr_in * g
+            
+        meta_learner.zero_grad()
 
     # get outer-grad
     out_pred = meta_learner(query_x, tuned_params)
@@ -62,8 +63,6 @@ def inner_loop(args, meta_learner, support_x, support_y, query_x, query_y, logge
     meta_learner,
     tuned_params=tuned_params,
     mode=mode)
-
-    meta_learner.zero_grad()
 
     return in_grad, out_grad
 
@@ -97,7 +96,7 @@ def outer_loop(args, meta_learner, opt, batch, logger, iter_counter):
 
     meta_learner.zero_grad()
     for p, g in zip(meta_learner.parameters(), grad):
-        p.grad = g/float(args.batch_size)
+        p.grad = g
 
     # summarise inner loop and get validation performance
     logger.summarise_inner_loop(mode='train')
@@ -173,10 +172,8 @@ def valid(args, meta_learner, dataloader_valid, logger, iter_counter):
     logger.print(iter_counter, in_grad, out_grad, mode='valid')
 
     return None
-
-def test(args, meta_learner, dataloader_test, logger, iter_counter):
     
-
+     
 def run(args):
 
     utils.set_seed(args.seed)
@@ -199,8 +196,7 @@ def run(args):
     dataloader_train = DataLoader(dataset_train,
                                     batch_size=args.batch_size,
                                     shuffle=True,
-                                    num_workers=args.num_workers,
-                                    pin_memory=False,
+                                    num_workers=args.num_workers
                                     drop_last=True)
     dataset_valid = MiniImagenet(mode='val',
                                     n_way=args.n_way,
@@ -212,8 +208,7 @@ def run(args):
     dataloader_valid = DataLoader(dataset_valid,
                                      batch_size=1,
                                      shuffle=True,
-                                     num_workers=args.num_workers,
-                                     pin_memory=True)
+                                     num_workers=args.num_workers)
 
     dataloaders = (dataloader_train, dataloader_valid)
 

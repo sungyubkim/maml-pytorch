@@ -72,7 +72,7 @@ class Network(nn.Module):
             training=True)
             x = F.max_pool2d(x, kernel_size=2, stride=2, padding=0)
 
-        x = x.view(-1, self.n_channel * 5 *5)
+        x = x.view(-1, self.n_channel * 5 * 5)
 
         x = F.linear(x,
         weight=params['layers.fc_weight'],
