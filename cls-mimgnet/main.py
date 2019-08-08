@@ -172,8 +172,8 @@ def valid(args, meta_learner, dataloader_valid, logger, iter_counter):
     logger.print(iter_counter, in_grad, out_grad, mode='valid')
 
     return None
-    
-     
+
+
 def run(args):
 
     utils.set_seed(args.seed)
@@ -196,7 +196,7 @@ def run(args):
     dataloader_train = DataLoader(dataset_train,
                                     batch_size=args.batch_size,
                                     shuffle=True,
-                                    num_workers=args.num_workers
+                                    num_workers=args.num_workers,
                                     drop_last=True)
     dataset_valid = MiniImagenet(mode='val',
                                     n_way=args.n_way,
