@@ -191,8 +191,10 @@ def run(args):
     utils.set_seed(args.seed)
 
     # make nets
-    # meta_learner = Network(args).to(args.device)
-    meta_learner = DenseNet(args).to(args.device)
+    if args.high_end:
+        meta_learner = DenseNet(args).to(args.device)
+    else:
+        meta_learner = Network(args).to(args.device)
 
     # make optimizer
     opt = torch.optim.Adam(meta_learner.parameters(), args.lr_out, weight_decay=5e-4)
