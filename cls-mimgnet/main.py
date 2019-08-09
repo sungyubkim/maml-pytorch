@@ -54,6 +54,13 @@ def inner_loop(args, meta_learner, support_x, support_y, query_x, query_y, logge
         out_loss,
         meta_learner.parameters()
     )
+    
+    # get computational graph
+    # from torchviz import make_dot
+    # img = make_dot(out_loss, params=dict(meta_learner.named_parameters()))
+    # img.format = 'png'
+    # img.render()
+    # input()
 
     logger.log_post_update(iter_counter,
     support_x,
@@ -96,7 +103,7 @@ def outer_loop(args, meta_learner, opt, batch, logger, iter_counter):
 
     meta_learner.zero_grad()
     for p, g in zip(meta_learner.parameters(), grad):
-        p.grad = g
+        p.grad = g/float(args.batch_size)
 
     # summarise inner loop and get validation performance
     logger.summarise_inner_loop(mode='train')

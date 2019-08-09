@@ -9,24 +9,21 @@ class Network(nn.Module):
         super().__init__()
 
         self.n_channel = n_channel
-        self.layers = nn.ParameterDict(
+        self.layers = nn.ParameterDict(OrderedDict([]))
+        for i in range(4):
+            # add convolution block
+            in_channel = 3 if i==0 else self.n_channel
+            self.layers.update(
+                OrderedDict([
+                    ('conv_{}_weight'.format(i), nn.Parameter(torch.zeros(self.n_channel, in_channel, 3, 3))),
+                    ('conv_{}_bias'.format(i), nn.Parameter(torch.zeros(self.n_channel))),
+                    ('bn_{}_weight'.format(i), nn.Parameter(torch.zeros(self.n_channel))),
+                    ('bn_{}_bias'.format(i), nn.Parameter(torch.zeros(self.n_channel))),
+                ])
+            )
+        # add fc layer
+        self.layers.update(
             OrderedDict([
-                ('conv_0_weight',nn.Parameter(torch.zeros(self.n_channel, 3, 3, 3))),
-                ('conv_0_bias', nn.Parameter(torch.zeros(self.n_channel))),
-                ('bn_0_weight', nn.Parameter(torch.zeros(self.n_channel))),
-                ('bn_0_bias', nn.Parameter(torch.zeros(self.n_channel))),
-                ('conv_1_weight',nn.Parameter(torch.zeros(self.n_channel, self.n_channel, 3, 3))),
-                ('conv_1_bias', nn.Parameter(torch.zeros(self.n_channel))),
-                ('bn_1_weight', nn.Parameter(torch.zeros(self.n_channel))),
-                ('bn_1_bias', nn.Parameter(torch.zeros(self.n_channel))),
-                ('conv_2_weight',nn.Parameter(torch.zeros(self.n_channel, self.n_channel, 3, 3))),
-                ('conv_2_bias', nn.Parameter(torch.zeros(self.n_channel))),
-                ('bn_2_weight', nn.Parameter(torch.zeros(self.n_channel))),
-                ('bn_2_bias', nn.Parameter(torch.zeros(self.n_channel))),
-                ('conv_3_weight',nn.Parameter(torch.zeros(self.n_channel, self.n_channel, 3, 3))),
-                ('conv_3_bias', nn.Parameter(torch.zeros(self.n_channel))),
-                ('bn_3_weight', nn.Parameter(torch.zeros(self.n_channel))),
-                ('bn_3_bias', nn.Parameter(torch.zeros(self.n_channel))),
                 ('fc_weight', nn.Parameter(torch.zeros(n_way, self.n_channel * 5 * 5))),
                 ('fc_bias', nn.Parameter(torch.zeros(n_way)))
             ])
@@ -44,7 +41,7 @@ class Network(nn.Module):
                     nn.init.constant_(v, 0.0)
             elif ('bn' in k):
                 if ('weight' in k):
-                    nn.init.uniform_(v)
+                    nn.init.constant_(v, 1.0)
                 elif ('bias' in k):
                     nn.init.constant_(v, 0.0)
 
@@ -58,7 +55,6 @@ class Network(nn.Module):
             weight=params['layers.conv_{}_weight'.format(i)],
             bias=params['layers.conv_{}_bias'.format(i)],
             padding=1)
-            x = F.relu(x)
             x_reshape = x.permute(1, 0, 2, 3).contiguous().detach() # (C, N, H, W)
             x_reshape = x_reshape.view(self.n_channel, -1) # (C, N * H * W)
             running_mean = x_reshape.mean(1) # (C)
@@ -70,6 +66,7 @@ class Network(nn.Module):
             bias=params['layers.bn_{}_bias'.format(i)],
             momentum=1.0,
             training=True)
+            x = F.relu(x)
             x = F.max_pool2d(x, kernel_size=2, stride=2, padding=0)
 
         x = x.view(-1, self.n_channel * 5 * 5)
@@ -84,3 +81,5 @@ if __name__=='__main__':
     net = Network()
     from pprint import pprint
     pprint([k for k, v in net.named_parameters()])
+    x = torch.rand((1, 3, 84, 84))
+    print(net(x).shape)

@@ -171,7 +171,7 @@ if __name__ == '__main__':
 
     args = arguments.parse_args()
 
-    path = os.path.join('./results', 'results_files.npy')
+    path = os.path.join('./results', 'results_files')
 
     # initialise logger
     logger = Logger(args)

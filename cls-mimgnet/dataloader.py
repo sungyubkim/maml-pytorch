@@ -54,7 +54,7 @@ class MiniImagenet(Dataset):
         self.transform = transforms.Compose([lambda x: Image.open(x).convert('RGB'),
                                              transforms.Resize((self.imsize, self.imsize), Image.LANCZOS),
                                              transforms.ToTensor(),
-                                            #  transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+                                             transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
                                              ])
 
         # check if images are all in one folder or separated into train/val/test folders
