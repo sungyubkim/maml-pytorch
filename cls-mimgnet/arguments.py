@@ -24,8 +24,16 @@ def parse_args():
     parser.add_argument('--first_order', type=bool, default=True, help='use first-order approximation for MAML')
 
     # network settings
+    parser.add_argument('--high_end', type=bool, default=True,
+    help='use DenseNet Backbone')
     parser.add_argument('--n_channel', type=int, default=32,
     help='number of channels for each convolution operation')
+    parser.add_argument('--growth_rate', type=int, default=12,
+    help='growth rate for dense block')
+    parser.add_argument('--n_block', type=int, default=3,
+    help='number of dense block')
+    parser.add_argument('--block_size', type=int, default=2,
+    help='number of convolution for each block')
 
     # device settings
     is_cuda = 'cuda' if torch.cuda.is_available() else 'cpu'

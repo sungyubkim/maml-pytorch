@@ -5,10 +5,10 @@ import torch.nn.functional as F
 from collections import OrderedDict
 
 class Network(nn.Module):
-    def __init__(self, n_channel=32, n_way=5):
+    def __init__(self,args):
         super().__init__()
-
-        self.n_channel = n_channel
+        self.device = args.device
+        self.n_channel = args.n_channel
         self.layers = nn.ParameterDict(OrderedDict([]))
         for i in range(4):
             # add convolution block
@@ -24,8 +24,8 @@ class Network(nn.Module):
         # add fc layer
         self.layers.update(
             OrderedDict([
-                ('fc_weight', nn.Parameter(torch.zeros(n_way, self.n_channel * 5 * 5))),
-                ('fc_bias', nn.Parameter(torch.zeros(n_way)))
+                ('fc_weight', nn.Parameter(torch.zeros(args.n_way, self.n_channel * 5 * 5))),
+                ('fc_bias', nn.Parameter(torch.zeros(args.n_way)))
             ])
         )
 
@@ -49,16 +49,18 @@ class Network(nn.Module):
 
         if params is None:
             params = OrderedDict(self.named_parameters())
+        else:
+            for k, v in self.named_parameters():
+                if k not in params:
+                    params[k] = v
 
         for i in range(4):
             x = F.conv2d(x,
             weight=params['layers.conv_{}_weight'.format(i)],
             bias=params['layers.conv_{}_bias'.format(i)],
             padding=1)
-            x_reshape = x.permute(1, 0, 2, 3).contiguous().detach() # (C, N, H, W)
-            x_reshape = x_reshape.view(self.n_channel, -1) # (C, N * H * W)
-            running_mean = x_reshape.mean(1) # (C)
-            running_var = x_reshape.var(1) # (C)
+            running_mean = torch.zeros(x.shape[1]).to(self.device) # (C)
+            running_var = torch.ones(x.shape[1]).to(self.device) # (C)
             x = F.batch_norm(x,
             running_mean=running_mean,
             running_var=running_var,
@@ -77,9 +79,169 @@ class Network(nn.Module):
         
         return x
 
+class DenseNet(nn.Module):
+    def __init__(self, args):
+        super().__init__()
+        self.device = args.device
+        self.growth_rate = args.growth_rate
+        self.n_block = args.n_block
+        self.block_size = args.block_size
+        self.layers = nn.ParameterDict(OrderedDict([]))
+
+        # add init conv block
+        self.layers.update(
+                OrderedDict([
+                    ('bn_weight', nn.Parameter(torch.zeros(3))),
+                    ('bn_bias', nn.Parameter(torch.zeros(3))),
+                    ('conv_weight', nn.Parameter(torch.zeros(16, 3, 7, 7))),
+                    ('conv_bias', nn.Parameter(torch.zeros(16))),
+                ])
+            )
+        
+        # add dense blocks
+        start_filter = 16
+        for i in range(self.n_block):
+            for j in range(self.block_size):
+                self.layers.update(OrderedDict([
+                    ('bn_bottleneck_{}_{}_weight'.format(i,j),  
+                    nn.Parameter(torch.zeros(self.growth_rate*j + start_filter))),
+                    ('bn_bottleneck_{}_{}_bias'.format(i,j), 
+                    nn.Parameter(torch.zeros(self.growth_rate*j + start_filter))),
+                    ('conv_bottleneck_{}_{}_weight'.format(i,j), 
+                    nn.Parameter(torch.zeros(4*self.growth_rate, self.growth_rate*j + start_filter, 1, 1))),
+                    ('conv_bottleneck_{}_{}_bias'.format(i,j), 
+                    nn.Parameter(torch.zeros(4*self.growth_rate))),
+                    ('bn_{}_{}_weight'.format(i,j),  
+                    nn.Parameter(torch.zeros(4*self.growth_rate))),
+                    ('bn_{}_{}_bias'.format(i,j), 
+                    nn.Parameter(torch.zeros(4*self.growth_rate))),
+                    ('conv_{}_{}_weight'.format(i,j), 
+                    nn.Parameter(torch.zeros(self.growth_rate, 4*self.growth_rate, 3, 3))),
+                    ('conv_{}_{}_bias'.format(i,j), 
+                    nn.Parameter(torch.zeros(self.growth_rate))),
+                ]))
+            self.layers.update(OrderedDict([
+                ('bn_transition_{}_weight'.format(i),  
+                nn.Parameter(torch.zeros(self.growth_rate*self.block_size + start_filter))),
+                ('bn_transition_{}_bias'.format(i), 
+                nn.Parameter(torch.zeros(self.growth_rate*self.block_size + start_filter))),
+                ('conv_transition_{}_weight'.format(i),
+                nn.Parameter(torch.zeros(int(0.5*(self.growth_rate*self.block_size + start_filter)) ,self.growth_rate*self.block_size + start_filter, 1, 1))),
+                ('conv_transition_{}_bias'.format(i),
+                nn.Parameter(torch.zeros(int(0.5*(self.growth_rate*self.block_size + start_filter)) ))),
+            ]))
+            start_filter = int(0.5*(self.growth_rate*self.block_size + start_filter))
+
+        # add fc layer
+        self.layers.update(OrderedDict([
+            ('fc_weight', nn.Parameter(torch.zeros(args.n_way, start_filter * 6 * 6))),
+            ('fc_bias', nn.Parameter(torch.zeros(args.n_way)))
+        ]))
+
+        self.init_params()
+
+    def init_params(self):
+
+        for k, v in self.named_parameters():
+            if ('conv' in k) or ('fc' in k):
+                if ('weight' in k):
+                    nn.init.xavier_normal_(v)
+                elif ('bias' in k):
+                    nn.init.constant_(v, 0.0)
+            elif ('bn' in k):
+                if ('weight' in k):
+                    nn.init.constant_(v, 1.0)
+                elif ('bias' in k):
+                    nn.init.constant_(v, 0.0)
+
+    def forward(self, x, params=None):
+
+        if params is None:
+            params = OrderedDict(self.named_parameters())
+        else:
+            for k, v in self.named_parameters():
+                if k not in params:
+                    params[k] = v
+
+        # apply init conv block
+        running_mean = torch.zeros(x.shape[1]).to(self.device) # (C)
+        running_var = torch.ones(x.shape[1]).to(self.device) # (C)
+        x = F.batch_norm(x,
+        running_mean=running_mean,
+        running_var=running_var,
+        weight=params['layers.bn_weight'],
+        bias=params['layers.bn_bias'],
+        momentum=1.0,
+        training=True)
+        x = F.conv2d(x,
+        weight=params['layers.conv_weight'],
+        bias=params['layers.conv_bias'])
+        x = F.max_pool2d(x, kernel_size=3, stride=2, padding=0)
+
+        # apply dense blocks
+        for i in range(self.n_block):
+            for j in range(self.block_size):
+                # apply bottleneck conv
+                running_mean = torch.zeros(x.shape[1]).to(self.device) # (C)
+                running_var = torch.ones(x.shape[1]).to(self.device) # (C)
+                x_cur = F.batch_norm(x,
+                running_mean=running_mean,
+                running_var=running_var,
+                weight=params['layers.bn_bottleneck_{}_{}_weight'.format(i,j)],
+                bias=params['layers.bn_bottleneck_{}_{}_bias'.format(i,j)],
+                momentum=1.0,
+                training=True)
+                x_cur = F.relu(x_cur)
+                x_cur = F.conv2d(x_cur,
+                weight=params['layers.conv_bottleneck_{}_{}_weight'.format(i,j)],
+                bias=params['layers.conv_bottleneck_{}_{}_bias'.format(i,j)])
+                # apply conv
+                running_mean = torch.zeros(x_cur.shape[1]).to(self.device) # (C)
+                running_var = torch.ones(x_cur.shape[1]).to(self.device) # (C)
+                x_cur = F.batch_norm(x_cur,
+                running_mean=running_mean,
+                running_var=running_var,
+                weight=params['layers.bn_{}_{}_weight'.format(i,j)],
+                bias=params['layers.bn_{}_{}_bias'.format(i,j)],
+                momentum=1.0,
+                training=True)
+                x_cur = F.relu(x_cur)
+                x_cur = F.conv2d(x_cur,
+                weight=params['layers.conv_{}_{}_weight'.format(i,j)],
+                bias=params['layers.conv_{}_{}_bias'.format(i,j)],
+                padding=1)
+                x = torch.cat((x, x_cur), 1)
+
+            # apply transition conv
+            running_mean = torch.zeros(x.shape[1]).to(self.device) # (C)
+            running_var = torch.ones(x.shape[1]).to(self.device) # (C)
+            x = F.batch_norm(x,
+            running_mean=running_mean,
+            running_var=running_var,
+            weight=params['layers.bn_transition_{}_weight'.format(i)],
+            bias=params['layers.bn_transition_{}_bias'.format(i)],
+            momentum=1.0,
+            training=True)
+            x = F.relu(x)
+            x = F.conv2d(x,
+            weight=params['layers.conv_transition_{}_weight'.format(i)],
+            bias=params['layers.conv_transition_{}_bias'.format(i)],
+            padding=1)
+            x = F.avg_pool2d(x, kernel_size=2, stride=2, padding=0)
+
+        x = x.view(-1, x.shape[1] * 6 * 6)
+
+        x = F.linear(x,
+        weight=params['layers.fc_weight'],
+        bias=params['layers.fc_bias'])
+        
+        return x
+
 if __name__=='__main__':
-    net = Network()
+    from arguments import parse_args
+    args = parse_args()
+    net = DenseNet(args).to(args.device)
     from pprint import pprint
     pprint([k for k, v in net.named_parameters()])
-    x = torch.rand((1, 3, 84, 84))
+    x = torch.rand((1, 3, 84, 84)).to(args.device)
     print(net(x).shape)

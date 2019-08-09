@@ -1,4 +1,4 @@
-from models import Network
+from models import *
 from arguments import parse_args
 from dataloader import MiniImagenet
 from logger import Logger
@@ -20,6 +20,11 @@ def inner_loop(args, meta_learner, support_x, support_y, query_x, query_y, logge
     tuned_params = OrderedDict({})
     for k, v in meta_learner.named_parameters():
         tuned_params[k] = v
+    tuned_params= OrderedDict(
+        [(k,tuned_params[k]) for k in (
+            'layers.fc_weight',
+            'layers.fc_bias')]
+        ) 
 
     logger.log_pre_update(iter_counter,
     support_x,
@@ -186,11 +191,11 @@ def run(args):
     utils.set_seed(args.seed)
 
     # make nets
-    meta_learner = Network(n_channel=args.n_channel,
-                            n_way=args.n_way).to(args.device)
+    # meta_learner = Network(args).to(args.device)
+    meta_learner = DenseNet(args).to(args.device)
 
     # make optimizer
-    opt = torch.optim.Adam(meta_learner.parameters(), args.lr_out, eps=1e-4)
+    opt = torch.optim.Adam(meta_learner.parameters(), args.lr_out, weight_decay=5e-4)
 
     # make datasets/ dataloaders
     dataset_train = MiniImagenet(mode='train',
