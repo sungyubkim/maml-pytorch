@@ -20,11 +20,12 @@ def inner_loop(args, meta_learner, support_x, support_y, query_x, query_y, logge
     tuned_params = OrderedDict({})
     for k, v in meta_learner.named_parameters():
         tuned_params[k] = v
-    tuned_params= OrderedDict(
-        [(k,tuned_params[k]) for k in (
-            'layers.fc_weight',
-            'layers.fc_bias')]
-        ) 
+    if args.decoupled=='decoupled':
+        tuned_params= OrderedDict(
+            [(k,tuned_params[k]) for k in (
+                'layers.fc_weight',
+                'layers.fc_bias')]
+            ) 
 
     logger.log_pre_update(iter_counter,
     support_x,
@@ -36,7 +37,6 @@ def inner_loop(args, meta_learner, support_x, support_y, query_x, query_y, logge
 
     inner_iter = args.grad_steps_num_train if mode=='train' else args.grad_steps_num_eval
     for j in range(inner_iter):
-
         # get inner-grad
         in_pred = meta_learner(support_x, tuned_params)
         in_loss = F.cross_entropy(in_pred, support_y)
@@ -191,9 +191,9 @@ def run(args):
     utils.set_seed(args.seed)
 
     # make nets
-    if args.high_end:
+    if args.backbone=='high-end':
         meta_learner = DenseNet(args).to(args.device)
-    else:
+    elif args.backbone=='low-end':
         meta_learner = Network(args).to(args.device)
 
     # make optimizer

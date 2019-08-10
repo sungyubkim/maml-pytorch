@@ -45,13 +45,16 @@ class Network(nn.Module):
                 elif ('bias' in k):
                     nn.init.constant_(v, 0.0)
 
-    def forward(self, x, params=None):
+    def forward(self, x, tuned_params=None):
 
-        if params is None:
+        if tuned_params is None:
             params = OrderedDict(self.named_parameters())
         else:
+            params = OrderedDict([])
             for k, v in self.named_parameters():
-                if k not in params:
+                if k in tuned_params:
+                    params[k] = tuned_params[k]
+                else:
                     params[k] = v
 
         for i in range(4):
@@ -154,13 +157,16 @@ class DenseNet(nn.Module):
                 elif ('bias' in k):
                     nn.init.constant_(v, 0.0)
 
-    def forward(self, x, params=None):
+    def forward(self, x, tuned_params=None):
 
-        if params is None:
+        if tuned_params is None:
             params = OrderedDict(self.named_parameters())
         else:
+            params = OrderedDict([])
             for k, v in self.named_parameters():
-                if k not in params:
+                if k in tuned_params:
+                    params[k] = tuned_params[k]
+                else:
                     params[k] = v
 
         # apply init conv block
