@@ -36,7 +36,7 @@ class Network(nn.Module):
         for k, v in self.named_parameters():
             if ('conv' in k) or ('fc' in k):
                 if ('weight' in k):
-                    nn.init.xavier_normal_(v)
+                    nn.init.kaiming_uniform_(v)
                 elif ('bias' in k):
                     nn.init.constant_(v, 0.0)
             elif ('bn' in k):
@@ -62,11 +62,9 @@ class Network(nn.Module):
             weight=params['layers.conv_{}_weight'.format(i)],
             bias=params['layers.conv_{}_bias'.format(i)],
             padding=1)
-            running_mean = torch.zeros(x.shape[1]).to(self.device) # (C)
-            running_var = torch.ones(x.shape[1]).to(self.device) # (C)
             x = F.batch_norm(x,
-            running_mean=running_mean,
-            running_var=running_var,
+            running_mean=None,
+            running_var=None,
             weight=params['layers.bn_{}_weight'.format(i)],
             bias=params['layers.bn_{}_bias'.format(i)],
             momentum=1.0,
@@ -148,7 +146,7 @@ class DenseNet(nn.Module):
         for k, v in self.named_parameters():
             if ('conv' in k) or ('fc' in k):
                 if ('weight' in k):
-                    nn.init.xavier_normal_(v)
+                    nn.init.kaiming_uniform_(v)
                 elif ('bias' in k):
                     nn.init.constant_(v, 0.0)
             elif ('bn' in k):
@@ -170,11 +168,9 @@ class DenseNet(nn.Module):
                     params[k] = v
 
         # apply init conv block
-        running_mean = torch.zeros(x.shape[1]).to(self.device) # (C)
-        running_var = torch.ones(x.shape[1]).to(self.device) # (C)
         x = F.batch_norm(x,
-        running_mean=running_mean,
-        running_var=running_var,
+        running_mean=None,
+        running_var=None,
         weight=params['layers.bn_weight'],
         bias=params['layers.bn_bias'],
         momentum=1.0,
@@ -188,11 +184,9 @@ class DenseNet(nn.Module):
         for i in range(self.n_block):
             for j in range(self.block_size):
                 # apply bottleneck conv
-                running_mean = torch.zeros(x.shape[1]).to(self.device) # (C)
-                running_var = torch.ones(x.shape[1]).to(self.device) # (C)
                 x_cur = F.batch_norm(x,
-                running_mean=running_mean,
-                running_var=running_var,
+                running_mean=None,
+                running_var=None,
                 weight=params['layers.bn_bottleneck_{}_{}_weight'.format(i,j)],
                 bias=params['layers.bn_bottleneck_{}_{}_bias'.format(i,j)],
                 momentum=1.0,
@@ -202,11 +196,9 @@ class DenseNet(nn.Module):
                 weight=params['layers.conv_bottleneck_{}_{}_weight'.format(i,j)],
                 bias=params['layers.conv_bottleneck_{}_{}_bias'.format(i,j)])
                 # apply conv
-                running_mean = torch.zeros(x_cur.shape[1]).to(self.device) # (C)
-                running_var = torch.ones(x_cur.shape[1]).to(self.device) # (C)
                 x_cur = F.batch_norm(x_cur,
-                running_mean=running_mean,
-                running_var=running_var,
+                running_mean=None,
+                running_var=None,
                 weight=params['layers.bn_{}_{}_weight'.format(i,j)],
                 bias=params['layers.bn_{}_{}_bias'.format(i,j)],
                 momentum=1.0,
@@ -219,11 +211,9 @@ class DenseNet(nn.Module):
                 x = torch.cat((x, x_cur), 1)
 
             # apply transition conv
-            running_mean = torch.zeros(x.shape[1]).to(self.device) # (C)
-            running_var = torch.ones(x.shape[1]).to(self.device) # (C)
             x = F.batch_norm(x,
-            running_mean=running_mean,
-            running_var=running_var,
+            running_mean=None,
+            running_var=None,
             weight=params['layers.bn_transition_{}_weight'.format(i)],
             bias=params['layers.bn_transition_{}_bias'.format(i)],
             momentum=1.0,

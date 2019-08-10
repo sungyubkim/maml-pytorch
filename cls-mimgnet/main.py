@@ -49,8 +49,6 @@ def inner_loop(args, meta_learner, support_x, support_y, query_x, query_y, logge
         # update base-learner
         for k, g in zip(tuned_params.keys(), in_grad):
             tuned_params[k] = tuned_params[k] - args.lr_in * g
-            
-        meta_learner.zero_grad()
 
     # get outer-grad
     out_pred = meta_learner(query_x, tuned_params)
@@ -89,7 +87,6 @@ def outer_loop(args, meta_learner, opt, batch, logger, iter_counter):
     support_x, support_y, query_x, query_y = batch
     grad = [0. for p in meta_learner.parameters()]
 
-    results = list()
     for i in range(args.batch_size):
 
         # accumulate grad to meta-learner using inner loop
@@ -103,19 +100,17 @@ def outer_loop(args, meta_learner, opt, batch, logger, iter_counter):
         iter_counter,
         mode='train')
 
-        for i in range(len(out_grad)):
-            grad[i] += out_grad[i].detach()
+        for j in range(len(out_grad)):
+            grad[j] += out_grad[j].detach()
 
-    meta_learner.zero_grad()
     for p, g in zip(meta_learner.parameters(), grad):
         p.grad = g/float(args.batch_size)
+        p.grad.data.clamp_(-10, 10)
+
+    opt.step()
 
     # summarise inner loop and get validation performance
     logger.summarise_inner_loop(mode='train')
-
-    torch.nn.utils.clip_grad_value_(meta_learner.parameters(), 10.0)
-
-    opt.step()
 
     return None
 
@@ -159,7 +154,6 @@ def valid(args, meta_learner, dataloader_valid, logger, iter_counter):
         for i in range(len(batch)):
             batch[i] = batch[i].to(args.device)
         support_x, support_y, query_x, query_y = batch
-        meta_learner.zero_grad()
 
         for i in range(support_x.shape[0]):
 
@@ -197,7 +191,7 @@ def run(args):
         meta_learner = Network(args).to(args.device)
 
     # make optimizer
-    opt = torch.optim.Adam(meta_learner.parameters(), args.lr_out, weight_decay=5e-4)
+    opt = torch.optim.Adam(meta_learner.parameters(), args.lr_out)
 
     # make datasets/ dataloaders
     dataset_train = MiniImagenet(mode='train',
@@ -220,7 +214,7 @@ def run(args):
                                     imsize=84,
                                     data_path=args.data_path)
     dataloader_valid = DataLoader(dataset_valid,
-                                     batch_size=1,
+                                     batch_size=4,
                                      shuffle=True,
                                      num_workers=args.num_workers)
 
