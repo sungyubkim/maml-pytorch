@@ -19,7 +19,7 @@ def inner_loop(args, meta_learner, support_x, support_y, query_x, query_y, logge
     '''
     tuned_params = OrderedDict({})
     for k, v in meta_learner.named_parameters():
-        tuned_params[k] = v
+        tuned_params[k] = v.clone()
     if args.decoupled=='decoupled':
         tuned_params= OrderedDict(
             [(k,tuned_params[k]) for k in (
@@ -104,7 +104,7 @@ def outer_loop(args, meta_learner, opt, batch, logger, iter_counter):
             grad[j] += out_grad[j].detach()
 
     for p, g in zip(meta_learner.parameters(), grad):
-        p.grad = g/float(args.batch_size)
+        p.grad = g / float(args.batch_size)
         p.grad.data.clamp_(-10, 10)
 
     opt.step()
@@ -191,7 +191,7 @@ def run(args):
         meta_learner = Network(args).to(args.device)
 
     # make optimizer
-    opt = torch.optim.Adam(meta_learner.parameters(), args.lr_out)
+    opt = torch.optim.Adam(meta_learner.parameters(), args.lr_out, eps=1e-4)
 
     # make datasets/ dataloaders
     dataset_train = MiniImagenet(mode='train',
