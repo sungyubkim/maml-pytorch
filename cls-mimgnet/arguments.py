@@ -18,7 +18,7 @@ def parse_args():
 
     # training settings
     parser.add_argument('--lr_in', type=float, default=1e-2, help='inner-loop learning rate (per task)')
-    parser.add_argument('--lr_out', type=float, default=1e-4, help='outer-loop learning rate (used with Adam optimizer)')
+    parser.add_argument('--lr_out', type=float, default=1e-3, help='outer-loop learning rate (used with Adam optimizer)')
     parser.add_argument('--grad_steps_num_train', type=int, default=5, help='number of gradient steps in inner loop (during training)')
     parser.add_argument('--grad_steps_num_eval', type=int, default=5, help='number of gradient updates at test time (for evaluation)')
     parser.add_argument('--first_order', type=bool, default=True, help='use first-order approximation for MAML')
@@ -28,14 +28,14 @@ def parse_args():
     help='high-end backbone(DenseNet) or low-end(original MAML network)')
     parser.add_argument('--decoupled', type=str, default='coupled',
     help='Decouple the base-learner and meta-learner')
-    parser.add_argument('--n_channel', type=int, default=48,
-    help='number of channels for each convolution operation')
+    parser.add_argument('--n_channel', type=int, default=32,
+    help='number of channels for each convolution operation(only low-end backbone)')
     parser.add_argument('--growth_rate', type=int, default=32,
-    help='growth rate for dense block')
+    help='growth rate for dense block(only high-end backbone)')
     parser.add_argument('--n_block', type=int, default=3,
-    help='number of dense block')
-    parser.add_argument('--block_size', type=int, default=2,
-    help='number of convolution for each block')
+    help='number of dense block(only high-end backbone)')
+    parser.add_argument('--block_size', type=int, default=3,
+    help='number of convolution for each block(only high-end backbone)')
 
     # device settings
     is_cuda = 'cuda' if torch.cuda.is_available() else 'cpu'

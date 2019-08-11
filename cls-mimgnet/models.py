@@ -17,7 +17,6 @@ class Network(nn.Module):
                 OrderedDict([
                     ('conv_{}_weight'.format(i), nn.Parameter(torch.zeros(self.n_channel, in_channel, 3, 3))),
                     ('conv_{}_bias'.format(i), nn.Parameter(torch.zeros(self.n_channel))),
-                    ('bn_{}_weight'.format(i), nn.Parameter(torch.zeros(self.n_channel))),
                     ('bn_{}_bias'.format(i), nn.Parameter(torch.zeros(self.n_channel))),
                 ])
             )
@@ -28,6 +27,7 @@ class Network(nn.Module):
                 ('fc_bias', nn.Parameter(torch.zeros(args.n_way)))
             ])
         )
+        self.bn_weight = torch.ones(self.n_channel).to(args.device)
 
         self.init_params()
 
@@ -65,7 +65,7 @@ class Network(nn.Module):
             x = F.batch_norm(x,
             running_mean=None,
             running_var=None,
-            weight=params['layers.bn_{}_weight'.format(i)],
+            weight=self.bn_weight,
             bias=params['layers.bn_{}_bias'.format(i)],
             momentum=1.0,
             training=True)
@@ -92,7 +92,6 @@ class DenseNet(nn.Module):
         # add init conv block
         self.layers.update(
                 OrderedDict([
-                    ('bn_weight', nn.Parameter(torch.zeros(3))),
                     ('bn_bias', nn.Parameter(torch.zeros(3))),
                     ('conv_weight', nn.Parameter(torch.zeros(16, 3, 7, 7))),
                     ('conv_bias', nn.Parameter(torch.zeros(16))),
@@ -104,15 +103,11 @@ class DenseNet(nn.Module):
         for i in range(self.n_block):
             for j in range(self.block_size):
                 self.layers.update(OrderedDict([
-                    ('bn_bottleneck_{}_{}_weight'.format(i,j),  
-                    nn.Parameter(torch.zeros(self.growth_rate*j + start_filter))),
                     ('bn_bottleneck_{}_{}_bias'.format(i,j), 
                     nn.Parameter(torch.zeros(self.growth_rate*j + start_filter))),
                     ('conv_bottleneck_{}_{}_weight'.format(i,j), 
                     nn.Parameter(torch.zeros(4*self.growth_rate, self.growth_rate*j + start_filter, 1, 1))),
                     ('conv_bottleneck_{}_{}_bias'.format(i,j), 
-                    nn.Parameter(torch.zeros(4*self.growth_rate))),
-                    ('bn_{}_{}_weight'.format(i,j),  
                     nn.Parameter(torch.zeros(4*self.growth_rate))),
                     ('bn_{}_{}_bias'.format(i,j), 
                     nn.Parameter(torch.zeros(4*self.growth_rate))),
@@ -122,8 +117,6 @@ class DenseNet(nn.Module):
                     nn.Parameter(torch.zeros(self.growth_rate))),
                 ]))
             self.layers.update(OrderedDict([
-                ('bn_transition_{}_weight'.format(i),  
-                nn.Parameter(torch.zeros(self.growth_rate*self.block_size + start_filter))),
                 ('bn_transition_{}_bias'.format(i), 
                 nn.Parameter(torch.zeros(self.growth_rate*self.block_size + start_filter))),
                 ('conv_transition_{}_weight'.format(i),
@@ -168,13 +161,15 @@ class DenseNet(nn.Module):
                     params[k] = v
 
         # apply init conv block
+        bn_weight = torch.ones_like(params['layers.bn_bias'])
         x = F.batch_norm(x,
         running_mean=None,
         running_var=None,
-        weight=params['layers.bn_weight'],
+        weight=bn_weight,
         bias=params['layers.bn_bias'],
         momentum=1.0,
         training=True)
+        x = F.relu(x)
         x = F.conv2d(x,
         weight=params['layers.conv_weight'],
         bias=params['layers.conv_bias'])
@@ -184,10 +179,11 @@ class DenseNet(nn.Module):
         for i in range(self.n_block):
             for j in range(self.block_size):
                 # apply bottleneck conv
+                bn_weight = torch.ones_like(params['layers.bn_bottleneck_{}_{}_bias'.format(i,j)])
                 x_cur = F.batch_norm(x,
                 running_mean=None,
                 running_var=None,
-                weight=params['layers.bn_bottleneck_{}_{}_weight'.format(i,j)],
+                weight=bn_weight,
                 bias=params['layers.bn_bottleneck_{}_{}_bias'.format(i,j)],
                 momentum=1.0,
                 training=True)
@@ -196,10 +192,11 @@ class DenseNet(nn.Module):
                 weight=params['layers.conv_bottleneck_{}_{}_weight'.format(i,j)],
                 bias=params['layers.conv_bottleneck_{}_{}_bias'.format(i,j)])
                 # apply conv
+                bn_weight = torch.ones_like(params['layers.bn_{}_{}_bias'.format(i,j)])
                 x_cur = F.batch_norm(x_cur,
                 running_mean=None,
                 running_var=None,
-                weight=params['layers.bn_{}_{}_weight'.format(i,j)],
+                weight=bn_weight,
                 bias=params['layers.bn_{}_{}_bias'.format(i,j)],
                 momentum=1.0,
                 training=True)
@@ -211,10 +208,11 @@ class DenseNet(nn.Module):
                 x = torch.cat((x, x_cur), 1)
 
             # apply transition conv
+            bn_weight = torch.ones_like(params['layers.bn_transition_{}_bias'.format(i)])
             x = F.batch_norm(x,
             running_mean=None,
             running_var=None,
-            weight=params['layers.bn_transition_{}_weight'.format(i)],
+            weight=bn_weight,
             bias=params['layers.bn_transition_{}_bias'.format(i)],
             momentum=1.0,
             training=True)

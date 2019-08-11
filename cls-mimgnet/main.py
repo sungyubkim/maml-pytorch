@@ -191,7 +191,7 @@ def run(args):
         meta_learner = Network(args).to(args.device)
 
     # make optimizer
-    opt = torch.optim.Adam(meta_learner.parameters(), args.lr_out, eps=1e-4)
+    opt = torch.optim.Adam(meta_learner.parameters(), args.lr_out)
 
     # make datasets/ dataloaders
     dataset_train = MiniImagenet(mode='train',
