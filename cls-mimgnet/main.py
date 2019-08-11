@@ -18,8 +18,11 @@ def inner_loop(args, meta_learner, support_x, support_y, query_x, query_y, logge
     run a single episode == n-way k-shot problem
     '''
     tuned_params = OrderedDict({})
+    # only fine-tune the conv/fc weights/biases. do not fine-tuned the bn params
     for k, v in meta_learner.named_parameters():
-        tuned_params[k] = v.clone()
+        if ('conv' in k) or ('fc' in k):
+            tuned_params[k] = v.clone()
+    # decouple the base/meta learner makes faster 2nd order calc
     if args.decoupled=='decoupled':
         tuned_params= OrderedDict(
             [(k,tuned_params[k]) for k in (
