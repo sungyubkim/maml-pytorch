@@ -129,11 +129,11 @@ def train(args, meta_learner, opt, dataloaders, logger):
 
     iter_counter = 0
     epoch_counter = 0
-    while iter_counter < args.n_iter:
+    while iter_counter < args.n_epoch:
         
         # iterate over epoch
         logger.print_header()
-        # utils.adjust_opt(opt, epoch_counter)
+        utils.adjust_opt(opt, epoch_counter)
 
         for step, batch in enumerate(dataloader_train):
 
@@ -204,7 +204,7 @@ def run(args):
         meta_learner = Network(args).to(args.device)
 
     # make optimizer
-    opt = torch.optim.Adam(meta_learner.parameters(), args.lr_out)
+    opt = torch.optim.SGD(meta_learner.parameters(), args.lr_out, momentum=0.9, weight_decay=5e-4, nesterov=True)
 
     # make datasets/ dataloaders
     dataset_train = MiniImagenet(mode='train',
