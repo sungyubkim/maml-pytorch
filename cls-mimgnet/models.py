@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from dropblock import DropBlock2D
+
 from collections import OrderedDict
 
 class Network(nn.Module):
@@ -89,6 +91,9 @@ class DenseNet(nn.Module):
         self.block_size = args.block_size
         self.layers = nn.ParameterDict(OrderedDict([]))
 
+        self.drop_block_1 = DropBlock2D(block_size=1, drop_prob=0.1)
+        self.drop_block_5 = DropBlock2D(block_size=5, drop_prob=0.1)
+
         # add init conv block
         self.layers.update(
                 OrderedDict([
@@ -174,6 +179,7 @@ class DenseNet(nn.Module):
         weight=params['layers.conv_weight'],
         bias=params['layers.conv_bias'])
         x = F.max_pool2d(x, kernel_size=3, stride=2, padding=0)
+        x = self.drop_block_1(x)
 
         # apply dense blocks
         for i in range(self.n_block):
@@ -222,6 +228,7 @@ class DenseNet(nn.Module):
             bias=params['layers.conv_transition_{}_bias'.format(i)],
             padding=1)
             x = F.avg_pool2d(x, kernel_size=2, stride=2, padding=0)
+            x = self.drop_block_5(x)
 
         x = x.view(-1, x.shape[1] * 6 * 6)
 

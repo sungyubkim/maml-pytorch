@@ -229,11 +229,13 @@ class Logger:
 
     def get_accuracy(self, x, y, model, tuned_params=None):
         with torch.no_grad():
+            model.eval()
             predictions = model(x, tuned_params)
             num_correct = torch.argmax(F.softmax(predictions, dim=1), 1).eq(y).sum().item()
         return num_correct / len(y)
 
     def get_loss(self, x, y, model, tuned_params=None):
         with torch.no_grad():
+            model.eval()
             predictions = model(x, tuned_params)
         return F.cross_entropy(predictions, y).item()

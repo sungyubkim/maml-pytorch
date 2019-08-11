@@ -35,6 +35,7 @@ def inner_loop(args, meta_learner, support_x, support_y, query_x, query_y, logge
     meta_learner,
     mode=mode)
 
+    meta_learner.train()
     inner_iter = args.grad_steps_num_train if mode=='train' else args.grad_steps_num_eval
     for j in range(inner_iter):
         # get inner-grad
@@ -119,10 +120,12 @@ def train(args, meta_learner, opt, dataloaders, logger):
     dataloader_train, dataloader_valid = dataloaders
 
     iter_counter = 0
+    epoch_counter = 0
     while iter_counter < args.n_iter:
         
         # iterate over epoch
         logger.print_header()
+        utils.adjust_opt(opt, epoch_counter)
 
         for step, batch in enumerate(dataloader_train):
 
@@ -142,6 +145,8 @@ def train(args, meta_learner, opt, dataloaders, logger):
                     torch.save(save_model, args.save_path)
 
             iter_counter += 1
+
+        epoch_counter += 1
 
     return None
 
