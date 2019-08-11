@@ -29,8 +29,17 @@ def evaluate(args, meta_learner, logger, dataloader, mode):
         for inner_batch_idx in range(support_x.shape[0]):
 
             tuned_params = OrderedDict({})
+            # only fine-tune the conv/fc weights/biases. do not fine-tuned the bn params
             for k, v in meta_learner.named_parameters():
-                tuned_params[k] = v
+                if ('conv' in k) or ('fc' in k):
+                    tuned_params[k] = v.clone()
+            # decoupling the base/meta learner makes faster 2nd order calc
+            if args.decoupled=='decoupled':
+                tuned_params= OrderedDict(
+                    [(k,tuned_params[k]) for k in (
+                        'layers.fc_weight',
+                        'layers.fc_bias')]
+                    ) 
 
             logger.log_pre_update(support_x[inner_batch_idx], support_y[inner_batch_idx],
                                   query_x[inner_batch_idx], query_y[inner_batch_idx],
@@ -44,8 +53,7 @@ def evaluate(args, meta_learner, logger, dataloader, mode):
                 in_loss = F.cross_entropy(in_pred, support_y[inner_batch_idx])
                 in_grad = torch.autograd.grad(
                     in_loss,
-                    tuned_params.values(),
-                    create_graph=not(args.first_order)
+                    tuned_params.values()
                 )
 
                 # update base-learner

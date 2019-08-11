@@ -26,7 +26,7 @@ def parse_args():
     # network settings
     parser.add_argument('--backbone', type=str, default='low-end',
     help='high-end backbone(DenseNet) or low-end(original MAML network)')
-    parser.add_argument('--decoupled', type=str, default='decoupled',
+    parser.add_argument('--decoupled', type=str, default='coupled',
     help='Decouple the base-learner and meta-learner')
     parser.add_argument('--n_channel', type=int, default=32,
     help='number of channels for each convolution operation(only low-end backbone)')

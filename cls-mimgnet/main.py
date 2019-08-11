@@ -22,7 +22,7 @@ def inner_loop(args, meta_learner, support_x, support_y, query_x, query_y, logge
     for k, v in meta_learner.named_parameters():
         if ('conv' in k) or ('fc' in k):
             tuned_params[k] = v.clone()
-    # decouple the base/meta learner makes faster 2nd order calc
+    # decoupling the base/meta learner makes faster 2nd order calc
     if args.decoupled=='decoupled':
         tuned_params= OrderedDict(
             [(k,tuned_params[k]) for k in (
@@ -39,7 +39,10 @@ def inner_loop(args, meta_learner, support_x, support_y, query_x, query_y, logge
     mode=mode)
 
     meta_learner.train()
+    # different inner-loop iter between train/test
     inner_iter = args.grad_steps_num_train if mode=='train' else args.grad_steps_num_eval
+    # create graph only in the case of (train && second order)
+    create_graph = (mode=='train') and (not(args.first_order))
     for j in range(inner_iter):
         # get inner-grad
         in_pred = meta_learner(support_x, tuned_params)
@@ -47,7 +50,7 @@ def inner_loop(args, meta_learner, support_x, support_y, query_x, query_y, logge
         in_grad = torch.autograd.grad(
             in_loss,
             tuned_params.values(),
-            create_graph=not(args.first_order)
+            create_graph=create_graph
         )
 
         # update base-learner
@@ -105,7 +108,9 @@ def outer_loop(args, meta_learner, opt, batch, logger, iter_counter):
         mode='train')
 
         for j in range(len(out_grad)):
-            grad[j] += out_grad[j].detach()
+            grad[j] += out_grad[j]
+
+    meta_learner.zero_grad()
 
     for p, g in zip(meta_learner.parameters(), grad):
         p.grad = g / float(args.batch_size)
@@ -128,7 +133,7 @@ def train(args, meta_learner, opt, dataloaders, logger):
         
         # iterate over epoch
         logger.print_header()
-        utils.adjust_opt(opt, epoch_counter)
+        # utils.adjust_opt(opt, epoch_counter)
 
         for step, batch in enumerate(dataloader_train):
 
