@@ -123,13 +123,36 @@ def outer_loop(args, meta_learner, opt, batch, logger, iter_counter):
 
     return None
 
-def train(args, meta_learner, opt, dataloaders, logger):
+def train(args, meta_learner, opt, logger):
 
-    dataloader_train, dataloader_valid = dataloaders
+    # make datasets/ dataloaders
+    dataset_train = MiniImagenet(mode='train',
+                                    n_way=args.n_way,
+                                    k_shot=args.k_shot,
+                                    k_query=args.k_query,
+                                    batchsz=4000,
+                                    imsize=84,
+                                    data_path=args.data_path)
+    dataloader_train = DataLoader(dataset_train,
+                                    batch_size=args.batch_size,
+                                    shuffle=True,
+                                    num_workers=args.num_workers,
+                                    drop_last=True)
+    dataset_valid = MiniImagenet(mode='val',
+                                    n_way=args.n_way,
+                                    k_shot=args.k_shot,
+                                    k_query=args.k_query,
+                                    batchsz=600,
+                                    imsize=84,
+                                    data_path=args.data_path)
+    dataloader_valid = DataLoader(dataset_valid,
+                                     batch_size=args.batch_size,
+                                     shuffle=True,
+                                     num_workers=args.num_workers)
 
     iter_counter = 0
     epoch_counter = 0
-    while iter_counter < args.n_epoch:
+    while epoch_counter < args.n_epoch:
         
         # iterate over epoch
         logger.print_header()
@@ -206,38 +229,11 @@ def run(args):
     # make optimizer
     opt = torch.optim.SGD(meta_learner.parameters(), args.lr_out, momentum=0.9, weight_decay=5e-4, nesterov=True)
 
-    # make datasets/ dataloaders
-    dataset_train = MiniImagenet(mode='train',
-                                    n_way=args.n_way,
-                                    k_shot=args.k_shot,
-                                    k_query=args.k_query,
-                                    batchsz=10000,
-                                    imsize=84,
-                                    data_path=args.data_path)
-    dataloader_train = DataLoader(dataset_train,
-                                    batch_size=args.batch_size,
-                                    shuffle=True,
-                                    num_workers=args.num_workers,
-                                    drop_last=True)
-    dataset_valid = MiniImagenet(mode='val',
-                                    n_way=args.n_way,
-                                    k_shot=args.k_shot,
-                                    k_query=args.k_query,
-                                    batchsz=100,
-                                    imsize=84,
-                                    data_path=args.data_path)
-    dataloader_valid = DataLoader(dataset_valid,
-                                     batch_size=4,
-                                     shuffle=True,
-                                     num_workers=args.num_workers)
-
-    dataloaders = (dataloader_train, dataloader_valid)
-
     # make logger
     logger = Logger(args)
 
     # train nets
-    train(args, meta_learner, opt, dataloaders, logger)
+    train(args, meta_learner, opt, logger)
 
     # write results
     return None
