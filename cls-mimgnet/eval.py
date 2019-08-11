@@ -179,7 +179,16 @@ if __name__ == '__main__':
 
     args = arguments.parse_args()
 
-    path = os.path.join('./results', 'results_files')
+    # save path
+    path = 'results/'+args.backbone
+    if args.decoupled:
+        path += '_decoupled'
+    else:
+        path += '_coupled'
+    if args.first_order:
+        path += '_first_order'
+    else:
+        path += '_second_order'
 
     # initialise logger
     logger = Logger(args)

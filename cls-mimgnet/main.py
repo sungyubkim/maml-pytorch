@@ -123,7 +123,7 @@ def outer_loop(args, meta_learner, opt, batch, logger, iter_counter):
 
     return None
 
-def train(args, meta_learner, opt, logger):
+def train(args, meta_learner, opt, logger, path):
 
     iter_counter = 0
     while iter_counter < args.n_iter:
@@ -164,20 +164,20 @@ def train(args, meta_learner, opt, logger):
 
             # log/ save
             if (iter_counter % args.log_interval == 0):
-                valid(args, meta_learner, dataloader_valid, logger,iter_counter)
-                if args.save_path is not None:
-                    np.save(args.save_path, [logger.training_stats, logger.validation_stats])
+                valid(args, meta_learner, dataloader_valid, logger,iter_counter, path)
+                if path is not None:
+                    np.save(path, [logger.training_stats, logger.validation_stats])
                     # save model to CPU
                     save_model = meta_learner
                     if args.device == 'cuda':
                         save_model = deepcopy(meta_learner).to('cpu')
-                    torch.save(save_model, args.save_path)
+                    torch.save(save_model, path)
 
             iter_counter += 1
 
     return None
 
-def valid(args, meta_learner, dataloader_valid, logger, iter_counter):
+def valid(args, meta_learner, dataloader_valid, logger, iter_counter, path):
     logger.prepare_inner_loop(iter_counter, mode='valid')
 
     for step, batch in enumerate(dataloader_valid):
@@ -204,7 +204,7 @@ def valid(args, meta_learner, dataloader_valid, logger, iter_counter):
     logger.summarise_inner_loop(mode='valid')
 
     # keep track of best models
-    logger.update_best_model(meta_learner, args.save_path)
+    logger.update_best_model(meta_learner, path)
 
     # print the log
     logger.print(iter_counter, in_grad, out_grad, mode='valid')
@@ -223,13 +223,24 @@ def run(args):
         meta_learner = Network(args).to(args.device)
 
     # make optimizer
-    opt = torch.optim.Adam(meta_learner.parameters(), lr=args.lr_out)
+    opt = torch.optim.Adam(meta_learner.parameters(), lr=args.lr_out, betas=(0.9,0.99))
 
     # make logger
     logger = Logger(args)
 
+    # save path
+    path = 'results/'+args.backbone
+    if args.decoupled:
+        path += '_decoupled'
+    else:
+        path += '_coupled'
+    if args.first_order:
+        path += '_first_order'
+    else:
+        path += '_second_order'
+
     # train nets
-    train(args, meta_learner, opt, logger)
+    train(args, meta_learner, opt, logger, path)
 
     # write results
     return None
