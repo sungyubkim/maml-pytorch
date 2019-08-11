@@ -20,13 +20,13 @@ def parse_args():
     parser.add_argument('--lr_in', type=float, default=1e-2, help='inner-loop learning rate (per task)')
     parser.add_argument('--lr_out', type=float, default=1e-3, help='outer-loop learning rate (used with Adam optimizer)')
     parser.add_argument('--grad_steps_num_train', type=int, default=5, help='number of gradient steps in inner loop (during training)')
-    parser.add_argument('--grad_steps_num_eval', type=int, default=5, help='number of gradient updates at test time (for evaluation)')
+    parser.add_argument('--grad_steps_num_eval', type=int, default=10, help='number of gradient updates at test time (for evaluation)')
     parser.add_argument('--first_order', type=bool, default=True, help='use first-order approximation for MAML')
 
     # network settings
     parser.add_argument('--backbone', type=str, default='low-end',
     help='high-end backbone(DenseNet) or low-end(original MAML network)')
-    parser.add_argument('--decoupled', type=str, default='coupled',
+    parser.add_argument('--decoupled', type=str, default='decoupled',
     help='Decouple the base-learner and meta-learner')
     parser.add_argument('--n_channel', type=int, default=32,
     help='number of channels for each convolution operation(only low-end backbone)')

@@ -50,14 +50,14 @@ class Network(nn.Module):
     def forward(self, x, tuned_params=None):
 
         if tuned_params is None:
-            params = OrderedDict(self.named_parameters())
+            params = OrderedDict([(k,v.clone()) for k,v in self.named_parameters()])
         else:
             params = OrderedDict([])
             for k, v in self.named_parameters():
-                if k in tuned_params:
-                    params[k] = tuned_params[k]
+                if k in tuned_params.keys():
+                    params[k] = tuned_params[k].clone()
                 else:
-                    params[k] = v
+                    params[k] = v.clone()
 
         for i in range(4):
             x = F.conv2d(x,
@@ -69,7 +69,6 @@ class Network(nn.Module):
             running_var=None,
             weight=params['layers.bn_{}_weight'.format(i)],
             bias=params['layers.bn_{}_bias'.format(i)],
-            momentum=1.0,
             training=True)
             x = F.relu(x)
             x = F.max_pool2d(x, kernel_size=2, stride=2, padding=0)
@@ -163,14 +162,14 @@ class DenseNet(nn.Module):
     def forward(self, x, tuned_params=None):
 
         if tuned_params is None:
-            params = OrderedDict(self.named_parameters())
+            params = OrderedDict([(k,v.clone()) for k,v in self.named_parameters()])
         else:
             params = OrderedDict([])
             for k, v in self.named_parameters():
-                if k in tuned_params:
-                    params[k] = tuned_params[k]
+                if k in tuned_params.keys():
+                    params[k] = tuned_params[k].clone()
                 else:
-                    params[k] = v
+                    params[k] = v.clone()
 
         # apply init conv block
         x = F.batch_norm(x,
@@ -178,7 +177,6 @@ class DenseNet(nn.Module):
         running_var=None,
         weight=params['layers.bn_weight'],
         bias=params['layers.bn_bias'],
-        momentum=1.0,
         training=True)
         x = F.relu(x)
         x = F.conv2d(x,
@@ -196,7 +194,6 @@ class DenseNet(nn.Module):
                 running_var=None,
                 weight=params['layers.bn_bottleneck_{}_{}_weight'.format(i,j)],
                 bias=params['layers.bn_bottleneck_{}_{}_bias'.format(i,j)],
-                momentum=1.0,
                 training=True)
                 x_cur = F.relu(x_cur)
                 x_cur = F.conv2d(x_cur,
@@ -208,7 +205,6 @@ class DenseNet(nn.Module):
                 running_var=None,
                 weight=params['layers.bn_{}_{}_weight'.format(i,j)],
                 bias=params['layers.bn_{}_{}_bias'.format(i,j)],
-                momentum=1.0,
                 training=True)
                 x_cur = F.relu(x_cur)
                 x_cur = F.conv2d(x_cur,
@@ -223,7 +219,6 @@ class DenseNet(nn.Module):
             running_var=None,
             weight=params['layers.bn_transition_{}_weight'.format(i)],
             bias=params['layers.bn_transition_{}_bias'.format(i)],
-            momentum=1.0,
             training=True)
             x = F.relu(x)
             x = F.conv2d(x,
