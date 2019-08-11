@@ -23,7 +23,7 @@ def inner_loop(args, meta_learner, support_x, support_y, query_x, query_y, logge
         if ('conv' in k) or ('fc' in k):
             tuned_params[k] = v.clone()
     # decoupling the base/meta learner makes faster 2nd order calc
-    if args.decoupled=='decoupled':
+    if args.decoupled:
         tuned_params= OrderedDict(
             [(k,tuned_params[k]) for k in (
                 'layers.fc_weight',
@@ -126,37 +126,35 @@ def outer_loop(args, meta_learner, opt, batch, logger, iter_counter):
 def train(args, meta_learner, opt, logger):
 
     iter_counter = 0
-    epoch_counter = 0
-    while epoch_counter < args.n_epoch:
+    while iter_counter < args.n_iter:
 
         # make datasets/ dataloaders
         dataset_train = MiniImagenet(mode='train',
-                                        n_way=args.n_way,
-                                        k_shot=args.k_shot,
-                                        k_query=args.k_query,
-                                        batchsz=2000,
-                                        imsize=84,
-                                        data_path=args.data_path)
+        n_way=args.n_way,
+        k_shot=args.k_shot,
+        k_query=args.k_query,
+        batchsz=10000,
+        imsize=84,
+        data_path=args.data_path)
         dataloader_train = DataLoader(dataset_train,
-                                        batch_size=args.batch_size,
-                                        shuffle=True,
-                                        num_workers=args.num_workers,
-                                        drop_last=True)
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=args.num_workers,
+        drop_last=True)
         dataset_valid = MiniImagenet(mode='val',
-                                        n_way=args.n_way,
-                                        k_shot=args.k_shot,
-                                        k_query=args.k_query,
-                                        batchsz=600,
-                                        imsize=84,
-                                        data_path=args.data_path)
+        n_way=args.n_way,
+        k_shot=args.k_shot,
+        k_query=args.k_query,
+        batchsz=100,
+        imsize=84,
+        data_path=args.data_path)
         dataloader_valid = DataLoader(dataset_valid,
-                                        batch_size=args.batch_size,
-                                        shuffle=True,
-                                        num_workers=args.num_workers)
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=args.num_workers)
         
         # iterate over epoch
         logger.print_header()
-        utils.adjust_opt(opt, epoch_counter)
 
         for step, batch in enumerate(dataloader_train):
 
@@ -176,8 +174,6 @@ def train(args, meta_learner, opt, logger):
                     torch.save(save_model, args.save_path)
 
             iter_counter += 1
-
-        epoch_counter += 1
 
     return None
 
@@ -227,7 +223,7 @@ def run(args):
         meta_learner = Network(args).to(args.device)
 
     # make optimizer
-    opt = torch.optim.SGD(meta_learner.parameters(), args.lr_out, momentum=0.9, weight_decay=5e-4, nesterov=True)
+    opt = torch.optim.Adam(meta_learner.parameters(), lr=args.lr_out)
 
     # make logger
     logger = Logger(args)
