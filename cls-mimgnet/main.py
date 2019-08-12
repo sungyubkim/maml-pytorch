@@ -126,7 +126,7 @@ def outer_loop(args, meta_learner, opt, batch, logger, iter_counter):
 
 def train(args, meta_learner, opt, logger, path):
 
-    sched = torch.optim.lr_scheduler.StepLR(meta_optimiser, 5000, 0.9)
+    sched = torch.optim.lr_scheduler.StepLR(opt, 5000, 0.9)
 
     iter_counter = 0
     while iter_counter < args.n_iter:
