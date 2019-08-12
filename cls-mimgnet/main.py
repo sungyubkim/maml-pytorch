@@ -38,7 +38,7 @@ def inner_loop(args, meta_learner, support_x, support_y, query_x, query_y, logge
     meta_learner,
     mode=mode)
 
-    meta_learner.train()
+    meta_learner.eval()
     # different inner-loop iter between train/test
     inner_iter = args.grad_steps_num_train if mode=='train' else args.grad_steps_num_eval
     # create graph only in the case of (train && second order)
@@ -57,6 +57,7 @@ def inner_loop(args, meta_learner, support_x, support_y, query_x, query_y, logge
         for k, g in zip(tuned_params.keys(), in_grad):
             tuned_params[k] = tuned_params[k] - args.lr_in * g
 
+    meta_learner.train()
     # get outer-grad
     out_pred = meta_learner(query_x, tuned_params)
     out_loss = F.cross_entropy(out_pred, query_y)
@@ -125,6 +126,8 @@ def outer_loop(args, meta_learner, opt, batch, logger, iter_counter):
 
 def train(args, meta_learner, opt, logger, path):
 
+    sched = torch.optim.lr_scheduler.StepLR(meta_optimiser, 5000, 0.9)
+
     iter_counter = 0
     while iter_counter < args.n_iter:
 
@@ -159,6 +162,8 @@ def train(args, meta_learner, opt, logger, path):
         for step, batch in enumerate(dataloader_train):
 
             logger.prepare_inner_loop(iter_counter)
+            
+            sched.step()
 
             outer_loop(args, meta_learner, opt, batch, logger, iter_counter)
 
@@ -223,7 +228,7 @@ def run(args):
         meta_learner = Network(args).to(args.device)
 
     # make optimizer
-    opt = torch.optim.Adam(meta_learner.parameters(), lr=args.lr_out, betas=(0.9,0.99))
+    opt = torch.optim.Adam(meta_learner.parameters(), lr=args.lr_out)
 
     # make logger
     logger = Logger(args)

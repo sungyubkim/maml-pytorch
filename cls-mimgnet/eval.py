@@ -24,7 +24,7 @@ def evaluate(args, meta_learner, logger, dataloader, mode):
         for i in range(len(batch)):
             batch[i] = batch[i].to(args.device)
         support_x, support_y, query_x, query_y = batch
-        meta_learner.zero_grad()
+        meta_learner.eval()
 
         for inner_batch_idx in range(support_x.shape[0]):
 
@@ -170,6 +170,7 @@ class Logger:
 
     def get_accuracy(self, x, y, meta_learner, tuned_params=None):
         with torch.no_grad():
+            meta_learner.eval()
             predictions = meta_learner(x, tuned_params)
             num_correct = torch.argmax(F.softmax(predictions, dim=1), 1).eq(y).sum().item()
         return num_correct / len(y)
