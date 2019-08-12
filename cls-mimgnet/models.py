@@ -12,7 +12,7 @@ class Network(nn.Module):
         self.device = args.device
         self.n_channel = args.n_channel
         self.layers = nn.ParameterDict(OrderedDict([]))
-        self.drop_out = nn.Dropout(p=0.1)
+        self.drop_out = nn.Dropout(p=0.5)
         for i in range(4):
             # add convolution block
             in_channel = 3 if i==0 else self.n_channel
@@ -95,21 +95,20 @@ class DenseNet(nn.Module):
         self.n_block = args.n_block
         self.block_size = args.block_size
         self.layers = nn.ParameterDict(OrderedDict([]))
-
-        self.drop_block = DropBlock2D(block_size=3, drop_prob=0.1)
+        self.drop_out = nn.Dropout(p=0.2)
 
         # add init conv block
         self.layers.update(
                 OrderedDict([
                     ('bn_weight', nn.Parameter(torch.zeros(3))),
                     ('bn_bias', nn.Parameter(torch.zeros(3))),
-                    ('conv_weight', nn.Parameter(torch.zeros(16, 3, 7, 7))),
-                    ('conv_bias', nn.Parameter(torch.zeros(16))),
+                    ('conv_weight', nn.Parameter(torch.zeros(64, 3, 7, 7))),
+                    ('conv_bias', nn.Parameter(torch.zeros(64))),
                 ])
             )
         
         # add dense blocks
-        start_filter = 16
+        start_filter = 64
         for i in range(self.n_block):
             for j in range(self.block_size):
                 self.layers.update(OrderedDict([
@@ -191,7 +190,6 @@ class DenseNet(nn.Module):
         weight=params['layers.conv_weight'],
         bias=params['layers.conv_bias'])
         x = F.max_pool2d(x, kernel_size=3, stride=2, padding=0)
-        x = self.drop_block(x)
 
         # apply dense blocks
         for i in range(self.n_block):
@@ -219,6 +217,7 @@ class DenseNet(nn.Module):
                 weight=params['layers.conv_{}_{}_weight'.format(i,j)],
                 bias=params['layers.conv_{}_{}_bias'.format(i,j)],
                 padding=1)
+                x_cur = self.drop_out(x_cur)
                 x = torch.cat((x, x_cur), 1)
 
             # apply transition conv
@@ -234,7 +233,6 @@ class DenseNet(nn.Module):
             bias=params['layers.conv_transition_{}_bias'.format(i)],
             padding=1)
             x = F.avg_pool2d(x, kernel_size=2, stride=2, padding=0)
-            x = self.drop_block(x)
 
         x = x.view(-1, x.shape[1] * 6 * 6)
 
