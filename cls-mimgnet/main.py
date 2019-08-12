@@ -25,9 +25,9 @@ def inner_loop(args, meta_learner, support_x, support_y, query_x, query_y, logge
     # decoupling the base/meta learner makes faster 2nd order calc
     if args.decoupled:
         tuned_params= OrderedDict(
-            [(k,tuned_params[k]) for k in (
-                'layers.fc_weight',
-                'layers.fc_bias')]
+            [(k,tuned_params[k]) 
+            for k in tuned_params.keys()
+            if 'fc' in k]
             ) 
 
     logger.log_pre_update(iter_counter,
@@ -56,7 +56,7 @@ def inner_loop(args, meta_learner, support_x, support_y, query_x, query_y, logge
         # update base-learner
         for k, g in zip(tuned_params.keys(), in_grad):
             tuned_params[k] = tuned_params[k] - args.lr_in * g
-
+            
     meta_learner.train()
     # get outer-grad
     out_pred = meta_learner(query_x, tuned_params)

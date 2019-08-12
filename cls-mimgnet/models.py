@@ -12,6 +12,7 @@ class Network(nn.Module):
         self.device = args.device
         self.n_channel = args.n_channel
         self.layers = nn.ParameterDict(OrderedDict([]))
+        self.drop_out = nn.Dropout(p=0.1)
         for i in range(4):
             # add convolution block
             in_channel = 3 if i==0 else self.n_channel
@@ -23,13 +24,16 @@ class Network(nn.Module):
                     ('bn_{}_bias'.format(i), nn.Parameter(torch.zeros(self.n_channel))),
                 ])
             )
-        # add fc layer
-        self.layers.update(
-            OrderedDict([
-                ('fc_weight', nn.Parameter(torch.zeros(args.n_way, self.n_channel * 5 * 5))),
-                ('fc_bias', nn.Parameter(torch.zeros(args.n_way)))
-            ])
-        )
+        # add fc layers (note that this architecture is different from original MAML)
+        for i in range(2):
+            in_size = self.n_channel * 5 * 5 if i==0 else args.n_hidden
+            out_size = args.n_hidden if i==0 else args.n_way
+            self.layers.update(
+                OrderedDict([
+                    ('fc_{}_weight'.format(i), nn.Parameter(torch.zeros(out_size, in_size))),
+                    ('fc_{}_bias'.format(i), nn.Parameter(torch.zeros(out_size)))
+                ])
+            )
 
         self.init_params()
 
@@ -38,7 +42,7 @@ class Network(nn.Module):
         for k, v in self.named_parameters():
             if ('conv' in k) or ('fc' in k):
                 if ('weight' in k):
-                    nn.init.kaiming_uniform_(v)
+                    nn.init.kaiming_normal_(v)
                 elif ('bias' in k):
                     nn.init.constant_(v, 0.0)
             elif ('bn' in k):
@@ -73,11 +77,13 @@ class Network(nn.Module):
             x = F.relu(x)
             x = F.max_pool2d(x, kernel_size=2, stride=2, padding=0)
 
-        x = x.view(-1, self.n_channel * 5 * 5)
+        x = self.drop_out(x.view(-1, self.n_channel * 5 * 5))
 
-        x = F.linear(x,
-        weight=params['layers.fc_weight'],
-        bias=params['layers.fc_bias'])
+        for i in range(2):
+            x = F.relu(x)
+            x = F.linear(x,
+            weight=params['layers.fc_{}_weight'.format(i)],
+            bias=params['layers.fc_{}_bias'.format(i)])
         
         return x
 
@@ -136,11 +142,14 @@ class DenseNet(nn.Module):
             ]))
             start_filter = int(0.5*(self.growth_rate*self.block_size + start_filter))
 
-        # add fc layer
-        self.layers.update(OrderedDict([
-            ('fc_weight', nn.Parameter(torch.zeros(args.n_way, start_filter * 6 * 6))),
-            ('fc_bias', nn.Parameter(torch.zeros(args.n_way)))
-        ]))
+        # add fc layers
+        for i in range(2):
+            in_size = start_filter * 6 * 6 if i==0 else args.n_hidden
+            out_size = args.n_hidden if i==0 else args.n_way
+            self.layers.update(OrderedDict([
+                ('fc_{}_weight'.format(i), nn.Parameter(torch.zeros(out_size, in_size))),
+                ('fc_{}_bias'.format(i), nn.Parameter(torch.zeros(out_size)))
+            ]))
 
         self.init_params()
 
@@ -149,7 +158,7 @@ class DenseNet(nn.Module):
         for k, v in self.named_parameters():
             if ('conv' in k) or ('fc' in k):
                 if ('weight' in k):
-                    nn.init.kaiming_uniform_(v)
+                    nn.init.kaiming_normal_(v)
                 elif ('bias' in k):
                     nn.init.constant_(v, 0.0)
             elif ('bn' in k):
@@ -229,9 +238,11 @@ class DenseNet(nn.Module):
 
         x = x.view(-1, x.shape[1] * 6 * 6)
 
-        x = F.linear(x,
-        weight=params['layers.fc_weight'],
-        bias=params['layers.fc_bias'])
+        for i in range(2):
+            x = F.relu(x)
+            x = F.linear(x,
+            weight=params['layers.fc_{}_weight'.format(i)],
+            bias=params['layers.fc_{}_bias'.format(i)])
         
         return x
 

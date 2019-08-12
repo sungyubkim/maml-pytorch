@@ -29,6 +29,8 @@ def parse_args():
     help='Decouple the base-learner and meta-learner')
     parser.add_argument('--n_channel', type=int, default=64,
     help='number of channels for each convolution operation(only low-end backbone)')
+    parser.add_argument('--n_hidden', type=int, default=256,
+    help='number of hidden dimenstion for fc layers(not in original MAML)')
     parser.add_argument('--growth_rate', type=int, default=64,
     help='growth rate for dense block(only high-end backbone)')
     parser.add_argument('--n_block', type=int, default=3,
