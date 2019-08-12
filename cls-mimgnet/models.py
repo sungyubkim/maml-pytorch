@@ -96,7 +96,7 @@ class DenseNet(nn.Module):
         self.block_size = args.block_size
         self.layers = nn.ParameterDict(OrderedDict([]))
 
-        self.drop_block = DropBlock2D(block_size=5, drop_prob=0.1)
+        self.drop_block = DropBlock2D(block_size=3, drop_prob=0.1)
 
         # add init conv block
         self.layers.update(

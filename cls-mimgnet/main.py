@@ -162,8 +162,6 @@ def train(args, meta_learner, opt, logger, path):
         for step, batch in enumerate(dataloader_train):
 
             logger.prepare_inner_loop(iter_counter)
-            
-            sched.step()
 
             outer_loop(args, meta_learner, opt, batch, logger, iter_counter)
 
@@ -179,6 +177,7 @@ def train(args, meta_learner, opt, logger, path):
                     torch.save(save_model, path)
 
             iter_counter += 1
+            sched.step()
 
     return None
 
