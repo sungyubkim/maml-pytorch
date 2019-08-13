@@ -148,7 +148,7 @@ def train(args, meta_learner, opt, logger, path):
         n_way=args.n_way,
         k_shot=args.k_shot,
         k_query=args.k_query,
-        batchsz=100,
+        batchsz=500,
         imsize=84,
         data_path=args.data_path)
         dataloader_valid = DataLoader(dataset_valid,

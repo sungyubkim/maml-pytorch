@@ -51,11 +51,29 @@ class MiniImagenet(Dataset):
             print('shuffle DB :%s, b:%d, %d-way, %d-shot, %d-query, resize:%d' % (
                 mode, batchsz, n_way, k_shot, k_query, imsize))
 
-        self.transform = transforms.Compose([lambda x: Image.open(x).convert('RGB'),
-                                             transforms.Resize((self.imsize, self.imsize), Image.LANCZOS),
-                                             transforms.ToTensor(),
-                                            #  transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-                                             ])
+        # self.transform = transforms.Compose([lambda x: Image.open(x).convert('RGB'),
+        #                             transforms.Resize((self.imsize, self.imsize), Image.LANCZOS),
+        #                             transforms.ToTensor(),
+        #                             transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+        #                             ])
+        if mode=='train':
+            self.transform = transforms.Compose([
+                    lambda x: Image.open(x),
+                    transforms.Resize((self.imsize, self.imsize), Image.LANCZOS),
+                    transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
+                    transforms.RandomHorizontalFlip(),
+                    lambda x: np.asarray(x),
+                    transforms.ToTensor(),
+                    transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+                ])
+        else:
+            self.transform = transforms.Compose([
+                    lambda x: Image.open(x),
+                    transforms.Resize((self.imsize, self.imsize), Image.LANCZOS),
+                    transforms.ToTensor(),
+                    transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+                ])
+
 
         # check if images are all in one folder or separated into train/val/test folders
         if os.path.exists(os.path.join(data_path, 'images')):
@@ -184,31 +202,12 @@ class MiniImagenet(Dataset):
         for i, filename in enumerate(filenames_support_x):
             filename_preprocessed = filename[:-4] + '_preprocessed_{}'.format(self.imsize)
             path_preprocessed = os.path.join(self.path_preprocessed, filename[:9], filename_preprocessed)
-            if not os.path.exists(path_preprocessed + '.npy'):
-                if not os.path.exists(os.path.join(self.path_preprocessed, filename[:9])):
-                    os.mkdir(os.path.join(self.path_preprocessed, filename[:9]))
-                if self.subfolder_split:
-                    support_x[i] = self.transform(os.path.join(self.path_images, filename[:9], filename))
-                else:
-                    support_x[i] = self.transform(os.path.join(self.path_images, filename))
-                np.save(path_preprocessed, support_x[i].numpy())
-            else:
-                support_x[i] = torch.from_numpy(np.load(path_preprocessed + '.npy'))
+            support_x[i] = self.transform(os.path.join(self.path_images, filename[:9], filename))
         # - same thing for the query set
         for i, filename in enumerate(filenames_query_x):
             filename_preprocessed = filename[:-4] + '_preprocessed_{}'.format(self.imsize)
             path_preprocessed = os.path.join(self.path_preprocessed, filename[:9], filename_preprocessed)
-            if not os.path.exists(path_preprocessed + '.npy'):
-                if not os.path.exists(os.path.join(self.path_preprocessed, filename[:9])):
-                    os.mkdir(os.path.join(self.path_preprocessed, filename[:9]))
-                if self.subfolder_split:
-                    query_x[i] = self.transform(os.path.join(self.path_images, filename[:9], filename))
-                else:
-                    query_x[i] = self.transform(os.path.join(self.path_images, filename))
-                np.save(path_preprocessed, query_x[i].numpy())
-            else:
-                query_x[i] = torch.from_numpy(np.load(path_preprocessed + '.npy'))
-
+            query_x[i] = self.transform(os.path.join(self.path_images, filename[:9], filename))
         return support_x, torch.LongTensor(support_y_relative), query_x, torch.LongTensor(query_y_relative)
 
     def __len__(self):

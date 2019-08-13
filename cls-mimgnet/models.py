@@ -12,9 +12,8 @@ class Network(nn.Module):
         self.device = args.device
         self.n_channel = args.n_channel
         self.layers = nn.ParameterDict(OrderedDict([]))
-        self.drop_out = nn.Dropout(p=0.5)
+        # add convolution blocks
         for i in range(4):
-            # add convolution block
             in_channel = 3 if i==0 else self.n_channel
             self.layers.update(
                 OrderedDict([
@@ -74,13 +73,13 @@ class Network(nn.Module):
             weight=params['layers.bn_{}_weight'.format(i)],
             bias=params['layers.bn_{}_bias'.format(i)],
             training=True)
-            x = F.relu(x)
+            x = F.leaky_relu(x, 0.1)
             x = F.max_pool2d(x, kernel_size=2, stride=2, padding=0)
 
         x = x.view(-1, self.n_channel * 5 * 5)
 
         for i in range(2):
-            x = F.relu(x)
+            x = F.leaky_relu(x, 0.1)
             x = F.linear(x,
             weight=params['layers.fc_{}_weight'.format(i)],
             bias=params['layers.fc_{}_bias'.format(i)])
@@ -102,13 +101,13 @@ class DenseNet(nn.Module):
                 OrderedDict([
                     ('bn_weight', nn.Parameter(torch.zeros(3))),
                     ('bn_bias', nn.Parameter(torch.zeros(3))),
-                    ('conv_weight', nn.Parameter(torch.zeros(64, 3, 7, 7))),
-                    ('conv_bias', nn.Parameter(torch.zeros(64))),
+                    ('conv_weight', nn.Parameter(torch.zeros(args.n_channel, 3, 7, 7))),
+                    ('conv_bias', nn.Parameter(torch.zeros(args.n_channel))),
                 ])
             )
         
         # add dense blocks
-        start_filter = 64
+        start_filter = args.n_channel
         for i in range(self.n_block):
             for j in range(self.block_size):
                 self.layers.update(OrderedDict([
@@ -117,15 +116,15 @@ class DenseNet(nn.Module):
                     ('bn_bottleneck_{}_{}_bias'.format(i,j), 
                     nn.Parameter(torch.zeros(self.growth_rate*j + start_filter))),
                     ('conv_bottleneck_{}_{}_weight'.format(i,j), 
-                    nn.Parameter(torch.zeros(4*self.growth_rate, self.growth_rate*j + start_filter, 1, 1))),
+                    nn.Parameter(torch.zeros(self.growth_rate, self.growth_rate*j + start_filter, 1, 1))),
                     ('conv_bottleneck_{}_{}_bias'.format(i,j), 
-                    nn.Parameter(torch.zeros(4*self.growth_rate))),
+                    nn.Parameter(torch.zeros(self.growth_rate))),
                     ('bn_{}_{}_weight'.format(i,j), 
-                    nn.Parameter(torch.zeros(4*self.growth_rate))),
+                    nn.Parameter(torch.zeros(self.growth_rate))),
                     ('bn_{}_{}_bias'.format(i,j), 
-                    nn.Parameter(torch.zeros(4*self.growth_rate))),
+                    nn.Parameter(torch.zeros(self.growth_rate))),
                     ('conv_{}_{}_weight'.format(i,j), 
-                    nn.Parameter(torch.zeros(self.growth_rate, 4*self.growth_rate, 3, 3))),
+                    nn.Parameter(torch.zeros(self.growth_rate, self.growth_rate, 3, 3))),
                     ('conv_{}_{}_bias'.format(i,j), 
                     nn.Parameter(torch.zeros(self.growth_rate))),
                 ]))
@@ -185,7 +184,7 @@ class DenseNet(nn.Module):
         weight=params['layers.bn_weight'],
         bias=params['layers.bn_bias'],
         training=True)
-        x = F.relu(x)
+        x = F.leaky_relu(x, 0.1)
         x = F.conv2d(x,
         weight=params['layers.conv_weight'],
         bias=params['layers.conv_bias'])
@@ -201,7 +200,7 @@ class DenseNet(nn.Module):
                 weight=params['layers.bn_bottleneck_{}_{}_weight'.format(i,j)],
                 bias=params['layers.bn_bottleneck_{}_{}_bias'.format(i,j)],
                 training=True)
-                x_cur = F.relu(x_cur)
+                x_cur = F.leaky_relu(x_cur, 0.1)
                 x_cur = F.conv2d(x_cur,
                 weight=params['layers.conv_bottleneck_{}_{}_weight'.format(i,j)],
                 bias=params['layers.conv_bottleneck_{}_{}_bias'.format(i,j)])
@@ -212,7 +211,7 @@ class DenseNet(nn.Module):
                 weight=params['layers.bn_{}_{}_weight'.format(i,j)],
                 bias=params['layers.bn_{}_{}_bias'.format(i,j)],
                 training=True)
-                x_cur = F.relu(x_cur)
+                x_cur = F.leaky_relu(x_cur, 0.1)
                 x_cur = F.conv2d(x_cur,
                 weight=params['layers.conv_{}_{}_weight'.format(i,j)],
                 bias=params['layers.conv_{}_{}_bias'.format(i,j)],
@@ -227,7 +226,7 @@ class DenseNet(nn.Module):
             weight=params['layers.bn_transition_{}_weight'.format(i)],
             bias=params['layers.bn_transition_{}_bias'.format(i)],
             training=True)
-            x = F.relu(x)
+            x = F.leaky_relu(x, 0.1)
             x = F.conv2d(x,
             weight=params['layers.conv_transition_{}_weight'.format(i)],
             bias=params['layers.conv_transition_{}_bias'.format(i)],
@@ -237,7 +236,7 @@ class DenseNet(nn.Module):
         x = x.view(-1, x.shape[1] * 6 * 6)
 
         for i in range(2):
-            x = F.relu(x)
+            x = F.leaky_relu(x, 0.1)
             x = F.linear(x,
             weight=params['layers.fc_{}_weight'.format(i)],
             bias=params['layers.fc_{}_bias'.format(i)])

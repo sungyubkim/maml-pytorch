@@ -34,11 +34,11 @@ def evaluate(args, meta_learner, logger, dataloader, mode):
                 if ('conv' in k) or ('fc' in k):
                     tuned_params[k] = v.clone()
             # decoupling the base/meta learner makes faster 2nd order calc
-            if args.decoupled=='decoupled':
+            if args.decoupled:
                 tuned_params= OrderedDict(
-                    [(k,tuned_params[k]) for k in (
-                        'layers.fc_weight',
-                        'layers.fc_bias')]
+                    [(k,tuned_params[k]) 
+                    for k in tuned_params.keys()
+                    if 'fc' in k]
                     ) 
 
             logger.log_pre_update(support_x[inner_batch_idx], support_y[inner_batch_idx],
