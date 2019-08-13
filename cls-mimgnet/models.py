@@ -77,7 +77,7 @@ class Network(nn.Module):
             x = F.relu(x)
             x = F.max_pool2d(x, kernel_size=2, stride=2, padding=0)
 
-        x = self.drop_out(x.view(-1, self.n_channel * 5 * 5))
+        x = x.view(-1, self.n_channel * 5 * 5)
 
         for i in range(2):
             x = F.relu(x)

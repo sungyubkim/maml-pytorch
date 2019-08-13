@@ -9,7 +9,7 @@ def parse_args():
     parser.add_argument('--seed', type=int, default=2019)
     parser.add_argument('--data_path', type=str, default='./../../data/mini-imagenet/', help='folder which contains image data')
     parser.add_argument('--log_interval', type=int, default=100)
-    parser.add_argument('--n_iter', type=int, default=int(7.5e+4), help='number of outer-loops')
+    parser.add_argument('--n_iter', type=int, default=int(6e+4), help='number of outer-loops')
     parser.add_argument('--batch_size', type=int, default=4, help='number of tasks in each batch per meta-update')
     parser.add_argument('--n_way', type=int, default=5, help='number of object classes to learn')
     parser.add_argument('--k_shot', type=int, default=1, help='number of examples per class to learn from')
