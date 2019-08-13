@@ -211,7 +211,7 @@ if __name__ == '__main__':
             mini_test = MiniImagenet(mode=dataset, n_way=args.n_way,
                                         k_shot=args.k_shot, k_query=args.k_query,
                                         batchsz=500, verbose=True, imsize=84, data_path=args.data_path)
-            db_test = DataLoader(mini_test, batch_size=1, shuffle=True, num_workers=0)
+            db_test = DataLoader(mini_test, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
             # evaluate the meta_learner
             evaluate(args, meta_learner, logger, db_test, mode=dataset)

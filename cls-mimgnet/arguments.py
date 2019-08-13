@@ -18,8 +18,8 @@ def parse_args():
     # training settings
     parser.add_argument('--lr_in', type=float, default=1e-2, help='inner-loop learning rate (per task)')
     parser.add_argument('--lr_out', type=float, default=1e-3, help='outer-loop learning rate (used with Adam optimizer)')
-    parser.add_argument('--grad_steps_num_train', type=int, default=5, help='number of gradient steps in inner loop (during training)')
-    parser.add_argument('--grad_steps_num_eval', type=int, default=5, help='number of gradient updates in inner loop (during evaluation)')
+    parser.add_argument('--grad_steps_num_train', type=int, default=2, help='number of gradient steps in inner loop (during training)')
+    parser.add_argument('--grad_steps_num_eval', type=int, default=2, help='number of gradient updates in inner loop (during evaluation)')
     parser.add_argument('--first_order', type=lambda x: (str(x).lower() == 'true'), default=False, help='use first-order approximation for MAML')
 
     # network settings
