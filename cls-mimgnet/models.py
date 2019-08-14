@@ -238,7 +238,6 @@ class DenseNet(nn.Module):
             bias=params['layers.conv_transition_{}_bias'.format(i)])
             if i < 3:
                 x = F.avg_pool2d(x, kernel_size=2, stride=2)
-            print(x.shape)
 
         x = x.view(-1, x.shape[1] * 5 * 5)
 
