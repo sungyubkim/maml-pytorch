@@ -26,7 +26,7 @@ class MiniImagenet(Dataset):
     sets: conains n_way * k_shot for meta-train set, n_way * n_query for meta-test set.
     """
 
-    def __init__(self, mode, batchsz, n_way, k_shot, k_query, imsize, data_path, startidx=0, verbose=True):
+    def __init__(self, mode, batchsz, n_way, k_shot, k_query, imsize, data_path, startidx=0, verbose=True, data_augment=False):
         """
         :param mode: train, val or test
         :param batchsz: batch size of sets, not batch of imgs
@@ -46,19 +46,15 @@ class MiniImagenet(Dataset):
         self.imsize = imsize  # resize to
         self.startidx = startidx  # index label not from 0, but from startidx
         self.data_path = data_path
+        self.data_augment = data_augment
 
         if verbose:
             print('shuffle DB :%s, b:%d, %d-way, %d-shot, %d-query, resize:%d' % (
                 mode, batchsz, n_way, k_shot, k_query, imsize))
 
-        # self.transform = transforms.Compose([lambda x: Image.open(x).convert('RGB'),
-        #                             transforms.Resize((self.imsize, self.imsize), Image.LANCZOS),
-        #                             transforms.ToTensor(),
-        #                             transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-        #                             ])
-        if mode=='train':
+        if (self.data_augment) and (mode=='train'):
             self.transform = transforms.Compose([
-                    lambda x: Image.open(x),
+                    lambda x: Image.open(x).convert('RGB'),
                     transforms.Resize((self.imsize, self.imsize), Image.LANCZOS),
                     transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
                     transforms.RandomHorizontalFlip(),
@@ -68,7 +64,7 @@ class MiniImagenet(Dataset):
                 ])
         else:
             self.transform = transforms.Compose([
-                    lambda x: Image.open(x),
+                    lambda x: Image.open(x).convert('RGB'),
                     transforms.Resize((self.imsize, self.imsize), Image.LANCZOS),
                     transforms.ToTensor(),
                     transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),

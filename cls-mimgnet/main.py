@@ -138,7 +138,8 @@ def train(args, meta_learner, opt, logger, path):
         k_query=args.k_query,
         batchsz=10000,
         imsize=84,
-        data_path=args.data_path)
+        data_path=args.data_path,
+        data_augment=args.data_augment)
         dataloader_train = DataLoader(dataset_train,
         batch_size=args.batch_size,
         shuffle=True,
@@ -150,7 +151,8 @@ def train(args, meta_learner, opt, logger, path):
         k_query=args.k_query,
         batchsz=500,
         imsize=84,
-        data_path=args.data_path)
+        data_path=args.data_path,
+        data_augment=args.data_augment)
         dataloader_valid = DataLoader(dataset_valid,
         batch_size=args.batch_size,
         shuffle=True,

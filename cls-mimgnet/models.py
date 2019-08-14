@@ -101,7 +101,7 @@ class DenseNet(nn.Module):
                 OrderedDict([
                     ('bn_weight', nn.Parameter(torch.zeros(3))),
                     ('bn_bias', nn.Parameter(torch.zeros(3))),
-                    ('conv_weight', nn.Parameter(torch.zeros(args.n_channel, 3, 7, 7))),
+                    ('conv_weight', nn.Parameter(torch.zeros(args.n_channel, 3, 3, 3))),
                     ('conv_bias', nn.Parameter(torch.zeros(args.n_channel))),
                 ])
             )
@@ -188,7 +188,7 @@ class DenseNet(nn.Module):
         x = F.conv2d(x,
         weight=params['layers.conv_weight'],
         bias=params['layers.conv_bias'])
-        x = F.max_pool2d(x, kernel_size=3, stride=2, padding=0)
+        x = F.max_pool2d(x, kernel_size=2, stride=2)
 
         # apply dense blocks
         for i in range(self.n_block):
@@ -218,6 +218,7 @@ class DenseNet(nn.Module):
                 padding=1)
                 x_cur = self.drop_out(x_cur)
                 x = torch.cat((x, x_cur), 1)
+                print(x.shape)
 
             # apply transition conv
             x = F.batch_norm(x,
