@@ -36,7 +36,7 @@ class MiniImagenet(Dataset):
         :param imsize: resize to
         :param startidx: start to index label from startidx
         """
-
+        self.mode = mode
         self.batchsz = batchsz  # batch of set, not batch of imgs
         self.n_way = n_way  # n-way
         self.k_shot = k_shot  # k-shot
@@ -52,23 +52,25 @@ class MiniImagenet(Dataset):
             print('shuffle DB :%s, b:%d, %d-way, %d-shot, %d-query, resize:%d' % (
                 mode, batchsz, n_way, k_shot, k_query, imsize))
 
-        if (self.data_augment) and (mode=='train'):
-            self.transform = transforms.Compose([
-                    lambda x: Image.open(x).convert('RGB'),
-                    transforms.Resize((self.imsize, self.imsize), Image.LANCZOS),
-                    transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
-                    transforms.RandomHorizontalFlip(),
-                    lambda x: np.asarray(x),
-                    transforms.ToTensor(),
-                    transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-                ])
-        else:
-            self.transform = transforms.Compose([
-                    lambda x: Image.open(x).convert('RGB'),
-                    transforms.Resize((self.imsize, self.imsize), Image.LANCZOS),
-                    transforms.ToTensor(),
-                    transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-                ])
+        self.train_transform = transforms.Compose([
+                lambda x: Image.open(x).convert('RGB'),
+                # resize or random crop?
+                # transforms.Resize((self.imsize, self.imsize), Image.LANCZOS),
+                transforms.RandomCrop(84, padding=8),
+                transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
+                transforms.RandomHorizontalFlip(),
+                lambda x: np.asarray(x),
+                transforms.ToTensor(),
+                transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+            ])
+        self.test_transform = transforms.Compose([
+                lambda x: Image.open(x).convert('RGB'),
+                # resize or random crop?
+                # transforms.Resize((self.imsize, self.imsize), Image.LANCZOS),
+                transforms.RandomCrop(84, padding=8),
+                transforms.ToTensor(),
+                transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+            ])
 
 
         # check if images are all in one folder or separated into train/val/test folders
@@ -198,12 +200,18 @@ class MiniImagenet(Dataset):
         for i, filename in enumerate(filenames_support_x):
             filename_preprocessed = filename[:-4] + '_preprocessed_{}'.format(self.imsize)
             path_preprocessed = os.path.join(self.path_preprocessed, filename[:9], filename_preprocessed)
-            support_x[i] = self.transform(os.path.join(self.path_images, filename[:9], filename))
+            if (self.data_augment):
+                support_x[i] = self.train_transform(os.path.join(self.path_images, filename[:9], filename))
+            else:
+                support_x[i] = self.test_transform(os.path.join(self.path_images, filename[:9], filename))
         # - same thing for the query set
         for i, filename in enumerate(filenames_query_x):
             filename_preprocessed = filename[:-4] + '_preprocessed_{}'.format(self.imsize)
             path_preprocessed = os.path.join(self.path_preprocessed, filename[:9], filename_preprocessed)
-            query_x[i] = self.transform(os.path.join(self.path_images, filename[:9], filename))
+            if (self.data_augment) and (self.mode == 'train'):
+                query_x[i] = self.train_transform(os.path.join(self.path_images, filename[:9], filename))
+            else:
+                query_x[i] = self.test_transform(os.path.join(self.path_images, filename[:9], filename))
         return support_x, torch.LongTensor(support_y_relative), query_x, torch.LongTensor(query_y_relative)
 
     def __len__(self):

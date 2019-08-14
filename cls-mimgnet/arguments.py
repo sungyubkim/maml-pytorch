@@ -28,14 +28,16 @@ def parse_args():
     help='high-end backbone(DenseNet) or low-end(original MAML network)')
     parser.add_argument('--decoupled', type=lambda x: (str(x).lower() == 'true'), default=False,
     help='Decouple the base-learner and meta-learner')
-    parser.add_argument('--n_channel', type=int, default=128,
+    parser.add_argument('--n_block', type=int, default=6,
+    help='number of conv/dense block')
+    parser.add_argument('--n_channel', type=int, default=64,
     help='number of channels for each convolution operation(only low-end backbone)')
+    parser.add_argument('--n_layer', type=int, default=2,
+    help='number of mlp layers after feature extraction')
     parser.add_argument('--n_hidden', type=int, default=256,
     help='number of hidden dimenstion for fc layers(not in original MAML)')
     parser.add_argument('--growth_rate', type=int, default=64,
     help='growth rate for dense block(only high-end backbone)')
-    parser.add_argument('--n_block', type=int, default=3,
-    help='number of dense block(only high-end backbone)')
     parser.add_argument('--block_size', type=int, default=2,
     help='number of convolution for each block(only high-end backbone)')
 

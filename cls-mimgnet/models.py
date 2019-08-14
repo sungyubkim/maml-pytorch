@@ -10,10 +10,12 @@ class Network(nn.Module):
     def __init__(self,args):
         super().__init__()
         self.device = args.device
+        self.n_block = args.n_block
         self.n_channel = args.n_channel
+        self.n_layer = args.n_layer
         self.layers = nn.ParameterDict(OrderedDict([]))
         # add convolution blocks
-        for i in range(4):
+        for i in range(self.n_block):
             in_channel = 3 if i==0 else self.n_channel
             self.layers.update(
                 OrderedDict([
@@ -24,9 +26,9 @@ class Network(nn.Module):
                 ])
             )
         # add fc layers (note that this architecture is different from original MAML)
-        for i in range(2):
+        for i in range(self.n_layer):
             in_size = self.n_channel * 5 * 5 if i==0 else args.n_hidden
-            out_size = args.n_hidden if i==0 else args.n_way
+            out_size = args.n_way if i==(self.n_layer-1) else args.n_hidden
             self.layers.update(
                 OrderedDict([
                     ('fc_{}_weight'.format(i), nn.Parameter(torch.zeros(out_size, in_size))),
@@ -62,7 +64,7 @@ class Network(nn.Module):
                 else:
                     params[k] = v
 
-        for i in range(4):
+        for i in range(self.n_block):
             x = F.conv2d(x,
             weight=params['layers.conv_{}_weight'.format(i)],
             bias=params['layers.conv_{}_bias'.format(i)],
@@ -74,15 +76,17 @@ class Network(nn.Module):
             bias=params['layers.bn_{}_bias'.format(i)],
             training=True)
             x = F.leaky_relu(x, 0.1)
-            x = F.max_pool2d(x, kernel_size=2, stride=2, padding=0)
+            if i < 4:
+                x = F.max_pool2d(x, kernel_size=2, stride=2)
 
         x = x.view(-1, self.n_channel * 5 * 5)
 
-        for i in range(2):
-            x = F.leaky_relu(x, 0.1)
+        for i in range(self.n_layer):
             x = F.linear(x,
             weight=params['layers.fc_{}_weight'.format(i)],
             bias=params['layers.fc_{}_bias'.format(i)])
+            if (i < self.n_layer-1):
+                x = F.leaky_relu(x, 0.1)
         
         return x
 
@@ -93,8 +97,9 @@ class DenseNet(nn.Module):
         self.growth_rate = args.growth_rate
         self.n_block = args.n_block
         self.block_size = args.block_size
+        self.n_layer = args.n_layer
         self.layers = nn.ParameterDict(OrderedDict([]))
-        self.drop_out = nn.Dropout(p=0.2)
+        self.drop_out = nn.Dropout(p=0.1)
 
         # add init conv block
         self.layers.update(
@@ -108,7 +113,7 @@ class DenseNet(nn.Module):
         
         # add dense blocks
         start_filter = args.n_channel
-        for i in range(self.n_block):
+        for i in range(self.n_block-1):
             for j in range(self.block_size):
                 self.layers.update(OrderedDict([
                     ('bn_bottleneck_{}_{}_weight'.format(i,j), 
@@ -141,9 +146,9 @@ class DenseNet(nn.Module):
             start_filter = int(0.5*(self.growth_rate*self.block_size + start_filter))
 
         # add fc layers
-        for i in range(2):
-            in_size = start_filter * 6 * 6 if i==0 else args.n_hidden
-            out_size = args.n_hidden if i==0 else args.n_way
+        for i in range(self.n_layer):
+            in_size = start_filter * 5 * 5 if i==0 else args.n_hidden
+            out_size = args.n_way if i==(self.n_layer-1) else args.n_hidden
             self.layers.update(OrderedDict([
                 ('fc_{}_weight'.format(i), nn.Parameter(torch.zeros(out_size, in_size))),
                 ('fc_{}_bias'.format(i), nn.Parameter(torch.zeros(out_size)))
@@ -187,11 +192,12 @@ class DenseNet(nn.Module):
         x = F.leaky_relu(x, 0.1)
         x = F.conv2d(x,
         weight=params['layers.conv_weight'],
-        bias=params['layers.conv_bias'])
+        bias=params['layers.conv_bias'],
+        padding=1)
         x = F.max_pool2d(x, kernel_size=2, stride=2)
 
         # apply dense blocks
-        for i in range(self.n_block):
+        for i in range(self.n_block-1):
             for j in range(self.block_size):
                 # apply bottleneck conv
                 x_cur = F.batch_norm(x,
@@ -218,7 +224,6 @@ class DenseNet(nn.Module):
                 padding=1)
                 x_cur = self.drop_out(x_cur)
                 x = torch.cat((x, x_cur), 1)
-                print(x.shape)
 
             # apply transition conv
             x = F.batch_norm(x,
@@ -230,13 +235,14 @@ class DenseNet(nn.Module):
             x = F.leaky_relu(x, 0.1)
             x = F.conv2d(x,
             weight=params['layers.conv_transition_{}_weight'.format(i)],
-            bias=params['layers.conv_transition_{}_bias'.format(i)],
-            padding=1)
-            x = F.avg_pool2d(x, kernel_size=2, stride=2, padding=0)
+            bias=params['layers.conv_transition_{}_bias'.format(i)])
+            if i < 3:
+                x = F.avg_pool2d(x, kernel_size=2, stride=2)
+            print(x.shape)
 
-        x = x.view(-1, x.shape[1] * 6 * 6)
+        x = x.view(-1, x.shape[1] * 5 * 5)
 
-        for i in range(2):
+        for i in range(self.n_layer):
             x = F.leaky_relu(x, 0.1)
             x = F.linear(x,
             weight=params['layers.fc_{}_weight'.format(i)],
